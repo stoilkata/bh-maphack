@@ -27,16 +27,18 @@ extern int CUBE_LEFT;
 extern int CUBE_TOP;
 extern int CELL_SIZE;
 
-
-struct ItemPacketData {
+struct ItemPacketData
+{
 	unsigned int itemId;
 	unsigned int x;
 	unsigned int y;
 	ULONGLONG startTicks;
 	unsigned int destination;
+	unsigned int targetItemId; // For stacking operations
 };
 
-class ItemMover : public Module {
+class ItemMover : public Module
+{
 private:
 	bool FirstInit;
 	int *InventoryItemIds;
@@ -54,39 +56,47 @@ private:
 	unsigned int JuvKey;
 	ItemPacketData ActivePacket;
 	CRITICAL_SECTION crit;
-	Drawing::UITab* settingsTab;
+	Drawing::UITab *settingsTab;
+
 public:
 	ItemMover() : Module("Item Mover"),
-		ActivePacket(),
-		FirstInit(false),
-		InventoryItemIds(NULL),
-		StashItemIds(NULL),
-		LODStashItemIds(NULL),
-		ClassicStashItemIds(NULL),
-		CubeItemIds(NULL),
-		stashLayout(NULL),
-		inventoryLayout(NULL),
-		cubeLayout(NULL),
-	  tp_warn_quantity(3){
+				  ActivePacket(),
+				  FirstInit(false),
+				  InventoryItemIds(NULL),
+				  StashItemIds(NULL),
+				  LODStashItemIds(NULL),
+				  ClassicStashItemIds(NULL),
+				  CubeItemIds(NULL),
+				  stashLayout(NULL),
+				  inventoryLayout(NULL),
+				  cubeLayout(NULL),
+				  tp_warn_quantity(3)
+	{
 
 		InitializeCriticalSection(&crit);
 	};
 
-	~ItemMover() {
-		if (InventoryItemIds) {
-			delete [] InventoryItemIds;
+	~ItemMover()
+	{
+		if (InventoryItemIds)
+		{
+			delete[] InventoryItemIds;
 		}
-		if (StashItemIds) {
-			delete [] StashItemIds;
+		if (StashItemIds)
+		{
+			delete[] StashItemIds;
 		}
-		if (LODStashItemIds) {
-			delete [] LODStashItemIds;
+		if (LODStashItemIds)
+		{
+			delete[] LODStashItemIds;
 		}
-		if (ClassicStashItemIds) {
-			delete [] ClassicStashItemIds;
+		if (ClassicStashItemIds)
+		{
+			delete[] ClassicStashItemIds;
 		}
-		if (CubeItemIds) {
-			delete [] CubeItemIds;
+		if (CubeItemIds)
+		{
+			delete[] CubeItemIds;
 		}
 		DeleteCriticalSection(&crit);
 	};
@@ -101,24 +111,27 @@ public:
 	void PickUpItem();
 	void PutItemInContainer();
 	void PutItemOnGround();
-	void MoveRunesJewelsGemsToStash(bool* block);
-	void MoveNextItem(bool* block);
+	void MoveRunesJewelsGemsToStash(bool *block);
+	void MoveNextItem(bool *block);
 	void LoadConfig();
 
 	void OnLoad();
-	void OnKey(bool up, BYTE key, LPARAM lParam, bool* block);
-	void OnLeftClick(bool up, unsigned int x, unsigned int y, bool* block);
-	void OnRightClick(bool up, unsigned int x, unsigned int y, bool* block);
-	void OnGamePacketRecv(BYTE* packet, bool *block);
+	void OnKey(bool up, BYTE key, LPARAM lParam, bool *block);
+	void OnLeftClick(bool up, unsigned int x, unsigned int y, bool *block);
+	void OnRightClick(bool up, unsigned int x, unsigned int y, bool *block);
+	void OnGamePacketRecv(BYTE *packet, bool *block);
 	void OnGameExit();
 
-	std::vector<UnitAny*> itemsToMove;
+	std::vector<UnitAny *> itemsToMove;
 	bool isMovingItem = false;
 	std::thread moveThread;
 	std::mutex itemsMutex;
-
 };
-
 
 void ParseItem(const unsigned char *data, ItemInfo *ii, bool *success);
 bool ProcessStat(unsigned int statId, BitReader &reader, ItemProperty &itemProp);
+int GetMaxStackSize(char *code);
+bool IsSameStackableItem(char *code1, char *code2);
+int GetItemMaxStackSize(UnitAny *pItem);
+bool IsStackableGem(char* code);
+bool IsStackableRune(char* code);

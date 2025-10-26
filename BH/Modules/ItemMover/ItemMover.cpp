@@ -5,65 +5,75 @@
 #include "../../D2Stubs.h"
 #include "../../D2Helpers.h"
 #include "../ScreenInfo/ScreenInfo.h"
+#include <cstring>
 
 // This module was inspired by the RedVex plugin "Item Mover", written by kaiks.
 // Thanks to kaiks for sharing his code.
 
-#define INVENTORY_WIDTH  inventoryLayout->SlotWidth
+#define INVENTORY_WIDTH inventoryLayout->SlotWidth
 #define INVENTORY_HEIGHT inventoryLayout->SlotHeight
-#define INVENTORY_LEFT   inventoryLayout->Left
-#define INVENTORY_RIGHT  inventoryLayout->Right
-#define INVENTORY_TOP    inventoryLayout->Top
+#define INVENTORY_LEFT inventoryLayout->Left
+#define INVENTORY_RIGHT inventoryLayout->Right
+#define INVENTORY_TOP inventoryLayout->Top
 #define INVENTORY_BOTTOM inventoryLayout->Bottom
 
-#define STASH_WIDTH  stashLayout->SlotWidth
+#define STASH_WIDTH stashLayout->SlotWidth
 #define STASH_HEIGHT stashLayout->SlotHeight
-#define STASH_LEFT   stashLayout->Left
-#define STASH_RIGHT  stashLayout->Right
-#define STASH_TOP    stashLayout->Top
+#define STASH_LEFT stashLayout->Left
+#define STASH_RIGHT stashLayout->Right
+#define STASH_TOP stashLayout->Top
 #define STASH_BOTTOM stashLayout->Bottom
 
-#define CUBE_WIDTH  cubeLayout->SlotWidth
+#define CUBE_WIDTH cubeLayout->SlotWidth
 #define CUBE_HEIGHT cubeLayout->SlotHeight
-#define CUBE_LEFT   cubeLayout->Left
-#define CUBE_RIGHT  cubeLayout->Right
-#define CUBE_TOP    cubeLayout->Top
+#define CUBE_LEFT cubeLayout->Left
+#define CUBE_RIGHT cubeLayout->Right
+#define CUBE_TOP cubeLayout->Top
 #define CUBE_BOTTOM cubeLayout->Bottom
 
 #define CELL_SIZE inventoryLayout->SlotPixelHeight
 
-std::string POTIONS[] = { "hp", "mp", "rv" };
+std::string POTIONS[] = {"hp", "mp", "rv"};
 
 DWORD idBookId;
 DWORD unidItemId;
 
-bool ItemMover::Init() {
-	BnetData* pData = (*p_D2LAUNCH_BnData);
-	if (!pData) { return false; }
+bool ItemMover::Init()
+{
+	BnetData *pData = (*p_D2LAUNCH_BnData);
+	if (!pData)
+	{
+		return false;
+	}
 	int xpac = pData->nCharFlags & PLAYER_TYPE_EXPANSION;
 
-	if (xpac) {
+	if (xpac)
+	{
 		stashLayout = p_D2CLIENT_StashLayout;
 		StashItemIds = LODStashItemIds;
 	}
-	else {
+	else
+	{
 		stashLayout = p_D2CLIENT_ClassicStashLayout;
 		StashItemIds = ClassicStashItemIds;
 	}
 	inventoryLayout = p_D2CLIENT_InventoryLayout;
 	cubeLayout = p_D2CLIENT_CubeLayout;
 
-	if (!InventoryItemIds) {
+	if (!InventoryItemIds)
+	{
 		InventoryItemIds = new int[INVENTORY_WIDTH * INVENTORY_HEIGHT];
 	}
-	if (!StashItemIds) {
+	if (!StashItemIds)
+	{
 		StashItemIds = new int[STASH_WIDTH * STASH_HEIGHT];
 	}
-	if (!CubeItemIds) {
+	if (!CubeItemIds)
+	{
 		CubeItemIds = new int[CUBE_WIDTH * CUBE_HEIGHT];
 	}
 
-	//PrintText(1, "Got positions: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d",
+	// PrintText(1, "Got positions: %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d",
 	//	INVENTORY_WIDTH,
 	//	INVENTORY_HEIGHT,
 	//	STASH_WIDTH,
@@ -82,8 +92,19 @@ bool ItemMover::Init() {
 	return true;
 }
 
-bool ItemMover::LoadInventory(UnitAny *unit, int source, int sourceX, int sourceY, bool shiftState, bool ctrlState, int stashUI, int invUI) {
+bool ItemMover::LoadInventory(UnitAny *unit, int source, int sourceX, int sourceY, bool shiftState, bool ctrlState, int stashUI, int invUI)
+{
 	bool returnValue = false;
+
+	// Clear any previous packet data to ensure clean state
+	Lock();
+	ActivePacket.itemId = 0;
+	ActivePacket.x = 0;
+	ActivePacket.y = 0;
+	ActivePacket.startTicks = 0;
+	ActivePacket.destination = 0;
+	ActivePacket.targetItemId = 0;
+	Unlock();
 
 	memset(InventoryItemIds, 0, INVENTORY_WIDTH * INVENTORY_HEIGHT * sizeof(int));
 	memset(StashItemIds, 0, STASH_WIDTH * STASH_HEIGHT * sizeof(int));
@@ -92,29 +113,40 @@ bool ItemMover::LoadInventory(UnitAny *unit, int source, int sourceX, int source
 	unsigned int itemId = 0;
 	BYTE itemXSize, itemYSize;
 	bool cubeInInventory = false, cubeAnywhere = false;
-	for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem) {
+	for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem)
+	{
 		int *p, width;
-		if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY) {
+		if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY)
+		{
 			p = InventoryItemIds;
 			width = INVENTORY_WIDTH;
-		} else if (pItem->pItemData->ItemLocation == STORAGE_STASH) {
+		}
+		else if (pItem->pItemData->ItemLocation == STORAGE_STASH)
+		{
 			p = StashItemIds;
 			width = STASH_WIDTH;
-		} else if (pItem->pItemData->ItemLocation == STORAGE_CUBE) {
+		}
+		else if (pItem->pItemData->ItemLocation == STORAGE_CUBE)
+		{
 			p = CubeItemIds;
 			width = CUBE_WIDTH;
-		} else {
+		}
+		else
+		{
 			continue;
 		}
 
 		bool box = false;
 		char *code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
-		if (code[0] == 'b' && code[1] == 'o' && code[2] == 'x') {
-			if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY) {
+		if (code[0] == 'b' && code[1] == 'o' && code[2] == 'x')
+		{
+			if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY)
+			{
 				cubeInInventory = true;
 				cubeAnywhere = true;
 			}
-			if (pItem->pItemData->ItemLocation == STORAGE_STASH) {
+			if (pItem->pItemData->ItemLocation == STORAGE_STASH)
+			{
 				cubeAnywhere = true;
 			}
 			box = true;
@@ -124,15 +156,18 @@ bool ItemMover::LoadInventory(UnitAny *unit, int source, int sourceX, int source
 		int yStart = pItem->pObjectPath->dwPosY;
 		BYTE xSize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->xSize;
 		BYTE ySize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->ySize;
-		for (int x = xStart; x < xStart + xSize; x++) {
-			for (int y = yStart; y < yStart + ySize; y++) {
-				p[y*width + x] = pItem->dwUnitId;
+		for (int x = xStart; x < xStart + xSize; x++)
+		{
+			for (int y = yStart; y < yStart + ySize; y++)
+			{
+				p[y * width + x] = pItem->dwUnitId;
 
 				// If you click to move the cube into itself, your character ends up in
 				// the amusing (and apparently permanent) state where he has no visible
 				// cube and yet is unable to pick one up. Logging out does not fix it.
 				// So we disable all cube movements to be on the safe side.
-				if (x == sourceX && y == sourceY && pItem->pItemData->ItemLocation == source && !box) {
+				if (x == sourceX && y == sourceY && pItem->pItemData->ItemLocation == source && !box)
+				{
 					// This is the item we want to move
 					itemId = pItem->dwUnitId;
 					itemXSize = xSize;
@@ -143,22 +178,34 @@ bool ItemMover::LoadInventory(UnitAny *unit, int source, int sourceX, int source
 	}
 
 	int destination;
-	if (ctrlState && shiftState && ((stashUI && cubeAnywhere) || (invUI && cubeInInventory)) && source != STORAGE_CUBE) {
+	if (ctrlState && shiftState && ((stashUI && cubeAnywhere) || (invUI && cubeInInventory)) && source != STORAGE_CUBE)
+	{
 		destination = STORAGE_CUBE;
-	} else if (ctrlState) {
-		destination = STORAGE_NULL;  // i.e. the ground
-	} else if (source == STORAGE_STASH || source == STORAGE_CUBE) {
+	}
+	else if (ctrlState)
+	{
+		destination = STORAGE_NULL; // i.e. the ground
+	}
+	else if (source == STORAGE_STASH || source == STORAGE_CUBE)
+	{
 		destination = STORAGE_INVENTORY;
-	} else if (source == STORAGE_INVENTORY && D2CLIENT_GetUIState(UI_STASH)) {
+	}
+	else if (source == STORAGE_INVENTORY && D2CLIENT_GetUIState(UI_STASH))
+	{
 		destination = STORAGE_STASH;
-	} else if (source == STORAGE_INVENTORY && D2CLIENT_GetUIState(UI_CUBE)) {
+	}
+	else if (source == STORAGE_INVENTORY && D2CLIENT_GetUIState(UI_CUBE))
+	{
 		destination = STORAGE_CUBE;
-	} else {
+	}
+	else
+	{
 		return false;
 	}
 
 	// Find a spot for the item in the destination container
-	if (itemId > 0) {
+	if (itemId > 0)
+	{
 		returnValue = FindDestination(destination, itemId, itemXSize, itemYSize);
 	}
 
@@ -166,84 +213,183 @@ bool ItemMover::LoadInventory(UnitAny *unit, int source, int sourceX, int source
 	return returnValue;
 }
 
-bool ItemMover::FindDestination(int destination, unsigned int itemId, BYTE xSize, BYTE ySize) {
+bool ItemMover::FindDestination(int destination, unsigned int itemId, BYTE xSize, BYTE ySize)
+{
+	Lock();
+	ActivePacket.targetItemId = 0;
+	Unlock();
+
 	int *p, width = 0, height = 0;
-	if (destination == STORAGE_INVENTORY) {
+	if (destination == STORAGE_INVENTORY)
+	{
 		p = InventoryItemIds;
 		width = INVENTORY_WIDTH;
 		height = INVENTORY_HEIGHT;
-	} else if (destination == STORAGE_STASH) {
+	}
+	else if (destination == STORAGE_STASH)
+	{
 		p = StashItemIds;
 		width = STASH_WIDTH;
 		height = STASH_HEIGHT;
-	} else if (destination == STORAGE_CUBE) {
+	}
+	else if (destination == STORAGE_CUBE)
+	{
 		p = CubeItemIds;
 		width = CUBE_WIDTH;
 		height = CUBE_HEIGHT;
 	}
 
+	UnitAny *unit = D2CLIENT_GetPlayerUnit();
+	UnitAny *sourceItem = NULL;
+	if (unit)
+	{
+		for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem)
+		{
+			if (pItem->dwUnitId == itemId)
+			{
+				sourceItem = pItem;
+				break;
+			}
+		}
+	}
+
 	bool found = false;
 	int destX = 0, destY = 0;
-	if (width) {
+
+	if (sourceItem && width)
+	{
+		char *sourceCode = D2COMMON_GetItemText(sourceItem->dwTxtFileNo)->szCode;
+
+		bool isOurStackableItem = (IsStackableRune(sourceCode) || IsStackableGem(sourceCode));
+
+		if (isOurStackableItem)
+		{
+			int maxStackSize = GetItemMaxStackSize(sourceItem);
+			for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem)
+			{
+				if ((destination == STORAGE_INVENTORY && pItem->pItemData->ItemLocation == STORAGE_INVENTORY) ||
+					(destination == STORAGE_STASH && pItem->pItemData->ItemLocation == STORAGE_STASH) ||
+					(destination == STORAGE_CUBE && pItem->pItemData->ItemLocation == STORAGE_CUBE))
+				{
+					char *targetCode = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
+
+					if (IsSameStackableItem(sourceCode, targetCode))
+					{
+						int currentQuantity = D2COMMON_GetUnitStat(pItem, STAT_AMMOQUANTITY, 0);
+						if (currentQuantity <= 0)
+							currentQuantity = 1; 
+
+						if (currentQuantity < maxStackSize)
+						{
+							destX = pItem->pObjectPath->dwPosX;
+							destY = pItem->pObjectPath->dwPosY;
+
+							found = true;
+
+							Lock();
+							if (ActivePacket.startTicks == 0)
+							{
+								ActivePacket.itemId = itemId;
+								ActivePacket.x = destX;
+								ActivePacket.y = destY;
+								ActivePacket.startTicks = BHGetTickCount();
+								ActivePacket.destination = destination;
+								ActivePacket.targetItemId = pItem->dwUnitId; 
+							}
+							Unlock();
+
+							return found; // Return early for stacking
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (!found && width)
+	{
 		bool first_y = true;
-		for (int x = 0; x < width; x++) {
-			for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++)
+		{
+			for (int y = 0; y < height; y++)
+			{
 				bool abort = false;
 				int vacancies = 0;
-				for (int testx = x; testx < x + xSize && testx < width; testx++) {
-					for (int testy = y; testy < y + ySize && testy < height; testy++) {
-						if (p[testy*width + testx]) {
+				for (int testx = x; testx < x + xSize && testx < width; testx++)
+				{
+					for (int testy = y; testy < y + ySize && testy < height; testy++)
+					{
+						if (p[testy * width + testx])
+						{
 							abort = true;
 							break;
-						} else {
+						}
+						else
+						{
 							vacancies++;
 						}
 					}
-					if (abort) {
+					if (abort)
+					{
 						break;
 					}
 				}
-				if (vacancies == xSize * ySize) {
+				if (vacancies == xSize * ySize)
+				{
 					// Found an empty spot that's big enough for the item
 					found = true;
 					destX = x;
 					destY = y;
 					break;
 				}
-				if (xSize == 1) {
-					if (first_y) {
-						if (x + 1 < width) {
+				if (xSize == 1)
+				{
+					if (first_y)
+					{
+						if (x + 1 < width)
+						{
 							x++;
 							y--;
 							first_y = false;
 						}
-					} else {
+					}
+					else
+					{
 						first_y = true;
 						x--;
 					}
 				}
 			} // end y loop
-			if (found) {
+			if (found)
+			{
 				break;
 			}
-			if (xSize == 2 && x % 2 == 0 && x + 2 >= width) {
+			if (xSize == 2 && x % 2 == 0 && x + 2 >= width)
+			{
 				x = 0;
-			} else {
+			}
+			else
+			{
 				x++;
 			}
 		} // end x loop
-	} else {
+	}
+	else if (!width)
+	{
 		found = true;
 	}
 
-	if (found) {
+	if (found)
+	{
 		Lock();
-		if (ActivePacket.startTicks == 0) {
+		if (ActivePacket.startTicks == 0)
+		{
 			ActivePacket.itemId = itemId;
 			ActivePacket.x = destX;
 			ActivePacket.y = destY;
 			ActivePacket.startTicks = BHGetTickCount();
 			ActivePacket.destination = destination;
+			ActivePacket.targetItemId = 0; // Clear target for regular placement
 		}
 		Unlock();
 	}
@@ -251,79 +397,106 @@ bool ItemMover::FindDestination(int destination, unsigned int itemId, BYTE xSize
 	return found;
 }
 
-void ItemMover::PickUpItem() {
-	BYTE PacketData[5] = {0x19,0,0,0,0};
-	*reinterpret_cast<int*>(PacketData + 1) = ActivePacket.itemId;
+void ItemMover::PickUpItem()
+{
+	BYTE PacketData[5] = {0x19, 0, 0, 0, 0};
+	*reinterpret_cast<int *>(PacketData + 1) = ActivePacket.itemId;
 	D2NET_SendPacket(5, 1, PacketData);
 }
 
-void ItemMover::PutItemInContainer() {
-	BYTE PacketData[17] = {0x18,0,0,0,0};
-	*reinterpret_cast<int*>(PacketData + 1) = ActivePacket.itemId;
-	*reinterpret_cast<int*>(PacketData + 5) = ActivePacket.x;
-	*reinterpret_cast<int*>(PacketData + 9) = ActivePacket.y;
-	*reinterpret_cast<int*>(PacketData + 13)= ActivePacket.destination;
-	D2NET_SendPacket(17, 1, PacketData);
+void ItemMover::PutItemInContainer()
+{
+	if (ActivePacket.targetItemId > 0)
+	{
+		BYTE PacketData[9] = {0x21, 0, 0, 0, 0, 0, 0, 0, 0};
+		*reinterpret_cast<int *>(PacketData + 1) = ActivePacket.itemId;		  
+		*reinterpret_cast<int *>(PacketData + 5) = ActivePacket.targetItemId; 
+		D2NET_SendPacket(9, 1, PacketData);
+	}
+	else
+	{
+		BYTE PacketData[17] = {0x18, 0, 0, 0, 0};
+		*reinterpret_cast<int *>(PacketData + 1) = ActivePacket.itemId;
+		*reinterpret_cast<int *>(PacketData + 5) = ActivePacket.x;
+		*reinterpret_cast<int *>(PacketData + 9) = ActivePacket.y;
+		*reinterpret_cast<int *>(PacketData + 13) = ActivePacket.destination;
+		D2NET_SendPacket(17, 1, PacketData);
+	}
 }
 
-void ItemMover::PutItemOnGround() {
-	BYTE PacketData[5] = {0x17,0,0,0,0};
-	*reinterpret_cast<int*>(PacketData + 1) = ActivePacket.itemId;
+void ItemMover::PutItemOnGround()
+{
+	BYTE PacketData[5] = {0x17, 0, 0, 0, 0};
+	*reinterpret_cast<int *>(PacketData + 1) = ActivePacket.itemId;
 	D2NET_SendPacket(5, 1, PacketData);
 }
 
-void ItemMover::OnLeftClick(bool up, unsigned int x, unsigned int y, bool* block) {
+void ItemMover::OnLeftClick(bool up, unsigned int x, unsigned int y, bool *block)
+{
 	UnitAny *unit = D2CLIENT_GetPlayerUnit();
 	bool shiftState = ((GetKeyState(VK_LSHIFT) & 0x80) || (GetKeyState(VK_RSHIFT) & 0x80));
-	
-	if (up || !unit || !shiftState || D2CLIENT_GetCursorItem()>0 ||
-		(!D2CLIENT_GetUIState(UI_INVENTORY) && !D2CLIENT_GetUIState(UI_STASH)
-			&& !D2CLIENT_GetUIState(UI_CUBE) && !D2CLIENT_GetUIState(UI_NPCSHOP)) ||
-		!Init()) {
+
+	if (up || !unit || !shiftState || D2CLIENT_GetCursorItem() > 0 ||
+		(!D2CLIENT_GetUIState(UI_INVENTORY) && !D2CLIENT_GetUIState(UI_STASH) && !D2CLIENT_GetUIState(UI_CUBE) && !D2CLIENT_GetUIState(UI_NPCSHOP)) ||
+		!Init())
+	{
 		return;
 	}
 
 	unidItemId = 0;
 	idBookId = 0;
-	
-	int mouseX,mouseY;	
 
-	for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem) {
+	int mouseX, mouseY;
+
+	for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem)
+	{
 		char *code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
-		if ((pItem->pItemData->dwFlags & ITEM_IDENTIFIED) <= 0) {
+		if ((pItem->pItemData->dwFlags & ITEM_IDENTIFIED) <= 0)
+		{
 			int xStart = pItem->pObjectPath->dwPosX;
 			int yStart = pItem->pObjectPath->dwPosY;
 			BYTE xSize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->xSize;
 			BYTE ySize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->ySize;
-			if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY) {
+			if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY)
+			{
 				mouseX = (*p_D2CLIENT_MouseX - INVENTORY_LEFT) / CELL_SIZE;
 				mouseY = (*p_D2CLIENT_MouseY - INVENTORY_TOP) / CELL_SIZE;
-			} else if(pItem->pItemData->ItemLocation == STORAGE_STASH) {
+			}
+			else if (pItem->pItemData->ItemLocation == STORAGE_STASH)
+			{
 				mouseX = (*p_D2CLIENT_MouseX - STASH_LEFT) / CELL_SIZE;
 				mouseY = (*p_D2CLIENT_MouseY - STASH_TOP) / CELL_SIZE;
-			} else if(pItem->pItemData->ItemLocation == STORAGE_CUBE) {
+			}
+			else if (pItem->pItemData->ItemLocation == STORAGE_CUBE)
+			{
 				mouseX = (*p_D2CLIENT_MouseX - CUBE_LEFT) / CELL_SIZE;
 				mouseY = (*p_D2CLIENT_MouseY - CUBE_TOP) / CELL_SIZE;
 			}
-			for (int x = xStart; x < xStart + xSize; x++) {
-				for (int y = yStart; y < yStart + ySize; y++) {
-					if (x == mouseX && y == mouseY) {
-						if ((pItem->pItemData->ItemLocation == STORAGE_STASH && !D2CLIENT_GetUIState(UI_STASH)) || (pItem->pItemData->ItemLocation == STORAGE_CUBE && !D2CLIENT_GetUIState(UI_CUBE))) {
+			for (int x = xStart; x < xStart + xSize; x++)
+			{
+				for (int y = yStart; y < yStart + ySize; y++)
+				{
+					if (x == mouseX && y == mouseY)
+					{
+						if ((pItem->pItemData->ItemLocation == STORAGE_STASH && !D2CLIENT_GetUIState(UI_STASH)) || (pItem->pItemData->ItemLocation == STORAGE_CUBE && !D2CLIENT_GetUIState(UI_CUBE)))
+						{
 							return;
 						}
-						unidItemId = pItem->dwUnitId;								
+						unidItemId = pItem->dwUnitId;
 					}
 				}
 			}
 		}
-		if (code[0] == 'i' && code[1] == 'b' && code[2] == 'k' && pItem->pItemData->ItemLocation == STORAGE_INVENTORY && D2COMMON_GetUnitStat(pItem, STAT_AMMOQUANTITY, 0)>0) {
+		if (code[0] == 'i' && code[1] == 'b' && code[2] == 'k' && pItem->pItemData->ItemLocation == STORAGE_INVENTORY && D2COMMON_GetUnitStat(pItem, STAT_AMMOQUANTITY, 0) > 0)
+		{
 			idBookId = pItem->dwUnitId;
 		}
-		if (unidItemId > 0 && idBookId > 0) {
-			BYTE PacketData[13] = { 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-			*reinterpret_cast<int*>(PacketData + 1) = idBookId;
-			*reinterpret_cast<WORD*>(PacketData + 5) = (WORD)unit->pPath->xPos;
-			*reinterpret_cast<WORD*>(PacketData + 9) = (WORD)unit->pPath->yPos;
+		if (unidItemId > 0 && idBookId > 0)
+		{
+			BYTE PacketData[13] = {0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+			*reinterpret_cast<int *>(PacketData + 1) = idBookId;
+			*reinterpret_cast<WORD *>(PacketData + 5) = (WORD)unit->pPath->xPos;
+			*reinterpret_cast<WORD *>(PacketData + 9) = (WORD)unit->pPath->yPos;
 			D2NET_SendPacket(13, 0, PacketData);
 			*block = true;
 			return;
@@ -331,11 +504,13 @@ void ItemMover::OnLeftClick(bool up, unsigned int x, unsigned int y, bool* block
 	}
 }
 
-void ItemMover::OnRightClick(bool up, unsigned int x, unsigned int y, bool* block) {
-	UnitAny* unit = D2CLIENT_GetPlayerUnit();
+void ItemMover::OnRightClick(bool up, unsigned int x, unsigned int y, bool *block)
+{
+	UnitAny *unit = D2CLIENT_GetPlayerUnit();
 	bool shiftState = ((GetKeyState(VK_LSHIFT) & 0x80) || (GetKeyState(VK_RSHIFT) & 0x80));
 	bool ctrlState = ((GetKeyState(VK_LCONTROL) & 0x80) || (GetKeyState(VK_RCONTROL) & 0x80));
-	if (up || !unit || !(shiftState || ctrlState) || !Init()) {
+	if (up || !unit || !(shiftState || ctrlState) || !Init())
+	{
 		return;
 	}
 
@@ -343,32 +518,38 @@ void ItemMover::OnRightClick(bool up, unsigned int x, unsigned int y, bool* bloc
 	int invUI = D2CLIENT_GetUIState(UI_INVENTORY);
 	int stashUI = D2CLIENT_GetUIState(UI_STASH);
 	int cubeUI = D2CLIENT_GetUIState(UI_CUBE);
-	if ((invUI || stashUI || cubeUI) && x >= INVENTORY_LEFT && x <= INVENTORY_RIGHT && y >= INVENTORY_TOP && y <= INVENTORY_BOTTOM) {
+	if ((invUI || stashUI || cubeUI) && x >= INVENTORY_LEFT && x <= INVENTORY_RIGHT && y >= INVENTORY_TOP && y <= INVENTORY_BOTTOM)
+	{
 		source = STORAGE_INVENTORY;
 		sourceX = (x - INVENTORY_LEFT) / CELL_SIZE;
 		sourceY = (y - INVENTORY_TOP) / CELL_SIZE;
 	}
-	else if (stashUI && x >= STASH_LEFT && x <= STASH_RIGHT && y >= STASH_TOP && y <= STASH_BOTTOM) {
+	else if (stashUI && x >= STASH_LEFT && x <= STASH_RIGHT && y >= STASH_TOP && y <= STASH_BOTTOM)
+	{
 		source = STORAGE_STASH;
 		sourceX = (x - STASH_LEFT) / CELL_SIZE;
 		sourceY = (y - STASH_TOP) / CELL_SIZE;
 	}
-	else if (cubeUI && x >= CUBE_LEFT && x <= CUBE_RIGHT && y >= CUBE_TOP && y <= CUBE_BOTTOM) {
+	else if (cubeUI && x >= CUBE_LEFT && x <= CUBE_RIGHT && y >= CUBE_TOP && y <= CUBE_BOTTOM)
+	{
 		source = STORAGE_CUBE;
 		sourceX = (x - CUBE_LEFT) / CELL_SIZE;
 		sourceY = (y - CUBE_TOP) / CELL_SIZE;
 	}
-	else {
+	else
+	{
 		return;
 	}
 
 	bool moveItem = LoadInventory(unit, source, sourceX, sourceY, shiftState, ctrlState, stashUI, invUI);
-	if (moveItem) {
+	if (moveItem)
+	{
 		PickUpItem();
 	}
 	*block = true;
 }
-void ItemMover::LoadConfig() {
+void ItemMover::LoadConfig()
+{
 	BH::config->ReadKey("Use TP Tome", "VK_NUMPADADD", TpKey);
 	BH::config->ReadKey("Use Healing Potion", "VK_NUMPADMULTIPLY", HealKey);
 	BH::config->ReadKey("Use Mana Potion", "VK_NUMPADSUBTRACT", ManaKey);
@@ -377,90 +558,196 @@ void ItemMover::LoadConfig() {
 	BH::config->ReadInt("Low TP Warning", tp_warn_quantity);
 }
 
-void ItemMover::OnLoad() {
+void ItemMover::OnLoad()
+{
 	LoadConfig();
-	Drawing::Texthook* colored_text;
+	Drawing::Texthook *colored_text;
 
 	settingsTab = new Drawing::UITab("Interaction", BH::settingsUI);
 
 	unsigned int x = 8;
 	unsigned int y = 7;
 	new Drawing::Texthook(settingsTab, x, y, "Keys (esc to clear)");
-	new Drawing::Keyhook(settingsTab, x, (y += 15), &TpKey ,  "Quick Town Portal:     ");
+	new Drawing::Keyhook(settingsTab, x, (y += 15), &TpKey, "Quick Town Portal:     ");
 	new Drawing::Keyhook(settingsTab, x, (y += 15), &HealKey, "Use Healing Potion:    ");
 	new Drawing::Keyhook(settingsTab, x, (y += 15), &ManaKey, "Use Mana Potion:       ");
-	new Drawing::Keyhook(settingsTab, x, (y += 15), &JuvKey,  "Use Rejuv Potion:      ");
+	new Drawing::Keyhook(settingsTab, x, (y += 15), &JuvKey, "Use Rejuv Potion:      ");
 
 	y += 7;
 
 	new Drawing::Texthook(settingsTab, x, (y += 15), "QoL features");
 	colored_text = new Drawing::Texthook(settingsTab, x, (y += 15),
-			"Shift-leftclick IDs an item if an ID tome is in inventory");
+										 "Shift-leftclick IDs an item if an ID tome is in inventory");
 	colored_text->SetColor(Gold);
 	colored_text = new Drawing::Texthook(settingsTab, x, (y += 15),
-			"Shift-rightclick moves between stash/open cube and inventory");
+										 "Shift-rightclick moves between stash/open cube and inventory");
 	colored_text->SetColor(Gold);
 	colored_text = new Drawing::Texthook(settingsTab, x, (y += 15),
-			"Ctrl-rightclick moves item to ground");
+										 "Ctrl-rightclick moves item to ground");
 	colored_text->SetColor(Gold);
 	colored_text = new Drawing::Texthook(settingsTab, x, (y += 15),
-			"Ctrl-shift-rightclick moves item into closed cube");
+										 "Ctrl-shift-rightclick moves item into closed cube");
 	colored_text->SetColor(Gold);
 
 	colored_text = new Drawing::Texthook(settingsTab, x, (y += 15),
-			"");
+										 "");
 	colored_text->SetColor(Gold);
-
 }
 
-std::string RUNES[] = { "r01", "r02", "r03", "r04", "r05", "r06", "r07", "r08", "r09", "r10", "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31", "r32", "r33" };
-std::string JEWELS[] = { "jew" };
+std::string RUNES[] = {"r01", "r02", "r03", "r04", "r05", "r06", "r07", "r08", "r09", "r10", "r11", "r12", "r13", "r14", "r15", "r16", "r17", "r18", "r19", "r20", "r21", "r22", "r23", "r24", "r25", "r26", "r27", "r28", "r29", "r30", "r31", "r32", "r33", "01s", "02s", "03s", "04s", "05s", "06s", "07s", "08s", "09s", "10s", "11s", "12s", "13s", "14s", "15s", "16s", "17s", "18s", "19s", "20s", "21s", "22s", "23s", "24s", "25s", "26s", "27s", "28s", "29s", "30s", "31s", "32s", "33s"};
+std::string JEWELS[] = {"jew"};
 std::string GEMS[] = {
 	"gcv", "gfv", "gcy", "gfy", "gcg", "gfg", "gcb", "gfb", "gzv",
-	"gcr", "gfr", "gcs", "gfs", "gcw", "gfw",               
-	"skc", "skf", "sku", "skl", "skz", "skg", "skq",        
-	"gpv", "gpy", "gpg", "gpb", "gpr", "gps", "gpw", "gly",  "glb", "glg", "glr", "glw", "gsv", "gsy", "gsb", "gsg", "gsr", "gsw"     
-};
+	"gcr", "gfr", "gcs", "gfs", "gcw", "gfw",
+	"skc", "skf", "sku", "skl", "skz", "skg", "skq",
+	"gpv", "gpy", "gpg", "gpb", "gpr", "gps", "gpw", "gly", "glb", "glg", "glr", "glw", "gsv", "gsy", "gsb", "gsg", "gsr", "gsw",
+	"glys", "gpys", "gpvs", "gpbs", "gpgs", "gprs", "gpws", "skzs", "gzvs", "glbs", "glgs", "glrs", "glws", "skls"};
 
-bool IsRuneJewelOrGem(char* code) {
-	for (const auto& rune : RUNES) {
-		if (code[0] == rune[0] && code[1] == rune[1] && code[2] == rune[2]) return true;
+bool IsRuneJewelOrGem(char *code)
+{
+	for (const auto &rune : RUNES)
+	{
+		if (code[0] == rune[0] && code[1] == rune[1] && code[2] == rune[2])
+			return true;
 	}
-	for (const auto& jewel : JEWELS) {
-		if (code[0] == jewel[0] && code[1] == jewel[1] && code[2] == jewel[2]) return true;
+	for (const auto &jewel : JEWELS)
+	{
+		if (code[0] == jewel[0] && code[1] == jewel[1] && code[2] == jewel[2])
+			return true;
 	}
-	for (const auto& gem : GEMS) {
-		if (code[0] == gem[0] && code[1] == gem[1] && code[2] == gem[2]) return true;
+	for (const auto &gem : GEMS)
+	{
+		if (code[0] == gem[0] && code[1] == gem[1] && code[2] == gem[2])
+			return true;
 	}
 	return false;
 }
 
+bool IsStackableRune(char *code)
+{
+	if (code[2] == 's' && code[0] >= '0' && code[0] <= '9' && code[1] >= '0' && code[1] <= '9')
+	{
+		int runeNum = ((code[0] - '0') * 10) + (code[1] - '0');
+		return (runeNum >= 1 && runeNum <= 33);
+	}
+	return false;
+}
 
-void ItemMover::MoveRunesJewelsGemsToStash(bool* block) {
-	UnitAny* unit = D2CLIENT_GetPlayerUnit();
-	if (!unit) return;
+BYTE GetRuneNumber(char *code)
+{
+	if (code[2] == 's' && code[0] >= '0' && code[0] <= '9' && code[1] >= '0' && code[1] <= '9')
+	{
+		return (BYTE)(((code[0] - '0') * 10) + code[1] - '0');
+	}
+	return 0;
+}
 
-	Init();  
+bool IsStackableGem(char *code)
+{
+	std::string stackableGems[] = {
+		"glys", "gpys", "gpvs", "gpbs", "gpgs", "gprs", "gpws",
+		"skzs", "gzvs", "glbs", "glgs", "glrs", "glws", "skls"};
+
+	std::string codeStr(code);
+	for (const auto &gem : stackableGems)
+	{
+		if (codeStr == gem)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+int GetItemMaxStackSize(UnitAny *pItem)
+{
+	if (!pItem)
+		return 1;
+
+	ItemText *itemTxt = D2COMMON_GetItemText(pItem->dwTxtFileNo);
+	if (!itemTxt)
+		return 1;
+
+	char *code = itemTxt->szCode;
+
+	if (IsStackableRune(code))
+	{
+		BYTE runeNum = GetRuneNumber(code);
+		if (runeNum >= 1 && runeNum <= 15)
+		{
+			return 20; 
+		}
+		else if (runeNum >= 16 && runeNum <= 33)
+		{
+			return 10; 
+		}
+	}
+	else if (IsStackableGem(code))
+	{
+		return 50; 
+	}
+
+	return 1; 
+}
+
+int GetMaxStackSize(char *code)
+{
+	if (IsStackableRune(code))
+	{
+		BYTE runeNum = GetRuneNumber(code);
+		if (runeNum >= 1 && runeNum <= 15)
+		{
+			return 20; 
+		}
+		else if (runeNum >= 16 && runeNum <= 33)
+		{
+			return 10; 
+		}
+	}
+	else if (IsStackableGem(code))
+	{
+		return 50; 
+	}
+	return 1; 
+}
+
+bool IsSameStackableItem(char *code1, char *code2)
+{
+	return strcmp(code1, code2) == 0;
+}
+
+void ItemMover::MoveRunesJewelsGemsToStash(bool *block)
+{
+	UnitAny *unit = D2CLIENT_GetPlayerUnit();
+	if (!unit)
+		return;
+
+	Init();
 
 	std::lock_guard<std::mutex> guard(itemsMutex);
 
 	itemsToMove.clear();
 
-	for (UnitAny* pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem) {
-		if (pItem->pItemData->ItemLocation != STORAGE_INVENTORY) continue;
+	for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem)
+	{
+		if (pItem->pItemData->ItemLocation != STORAGE_INVENTORY)
+			continue;
 
-		char* code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
-		if (IsRuneJewelOrGem(code)) {
+		char *code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
+		if (IsRuneJewelOrGem(code))
+		{
 			BYTE xSize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->xSize;
 			BYTE ySize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->ySize;
 
-			if (xSize == 1 && ySize == 1) {
+			if (xSize == 1 && ySize == 1)
+			{
 				itemsToMove.push_back(pItem);
 			}
 		}
 	}
 
-	moveThread = std::thread([this, block]() {
+	moveThread = std::thread([this, block]()
+							 {
 		while (true) {
 			{
 				std::lock_guard<std::mutex> guard(itemsMutex);
@@ -474,111 +761,130 @@ void ItemMover::MoveRunesJewelsGemsToStash(bool* block) {
 
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 		}
-		itemsToMove.clear();
-		});
+		itemsToMove.clear(); });
 
 	moveThread.detach();
 }
 
-
-void ItemMover::MoveNextItem(bool* block) {
+void ItemMover::MoveNextItem(bool *block)
+{
 	Init();
-    if (isMovingItem) return;
+	if (isMovingItem)
+		return;
 
-    if (itemsToMove.empty()) return;
+	if (itemsToMove.empty())
+		return;
 
-    UnitAny* pItem = itemsToMove.front();
-    itemsToMove.erase(itemsToMove.begin());
+	UnitAny *pItem = itemsToMove.front();
+	itemsToMove.erase(itemsToMove.begin());
 
-    int xStart = pItem->pObjectPath->dwPosX;
-    int yStart = pItem->pObjectPath->dwPosY;
-    BYTE xSize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->xSize;
-    BYTE ySize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->ySize;
+	int xStart = pItem->pObjectPath->dwPosX;
+	int yStart = pItem->pObjectPath->dwPosY;
+	BYTE xSize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->xSize;
+	BYTE ySize = D2COMMON_GetItemText(pItem->dwTxtFileNo)->ySize;
 
-    bool shiftState = false;  
-    bool ctrlState = false;   
-    bool stashUI = D2CLIENT_GetUIState(UI_STASH);
-    bool invUI = D2CLIENT_GetUIState(UI_INVENTORY);
+	bool shiftState = false;
+	bool ctrlState = false;
+	bool stashUI = D2CLIENT_GetUIState(UI_STASH);
+	bool invUI = D2CLIENT_GetUIState(UI_INVENTORY);
 
-    bool moveItem = LoadInventory(D2CLIENT_GetPlayerUnit(), STORAGE_INVENTORY, xStart, yStart, shiftState, ctrlState, stashUI, invUI);
+	bool moveItem = LoadInventory(D2CLIENT_GetPlayerUnit(), STORAGE_INVENTORY, xStart, yStart, shiftState, ctrlState, stashUI, invUI);
 
-    if (moveItem) {
-        isMovingItem = true;
-        PickUpItem();  
-    }
+	if (moveItem)
+	{
+		isMovingItem = true;
+		PickUpItem();
+	}
 }
-void ItemMover::OnKey(bool up, BYTE key, LPARAM lParam, bool* block)  {
+void ItemMover::OnKey(bool up, BYTE key, LPARAM lParam, bool *block)
+{
 	UnitAny *unit = D2CLIENT_GetPlayerUnit();
 	if (!unit)
 		return;
 
-	if (!up && key == VK_DELETE) {
-	    MoveRunesJewelsGemsToStash(block);
+	if (!up && key == VK_DELETE)
+	{
+		MoveRunesJewelsGemsToStash(block);
 	}
 
-	if (!up && (key == HealKey || key == ManaKey || key == JuvKey)) {
-		int idx = key == JuvKey ? 2 : key == ManaKey ? 1 : 0;
+	if (!up && (key == HealKey || key == ManaKey || key == JuvKey))
+	{
+		int idx = key == JuvKey ? 2 : key == ManaKey ? 1
+													 : 0;
 		std::string startChars = POTIONS[idx];
 		char minPotion = 127;
 		DWORD minItemId = 0;
 		bool isBelt = false;
-		for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem) {
+		for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem)
+		{
 			if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY ||
-				pItem->pItemData->ItemLocation == STORAGE_NULL && pItem->pItemData->NodePage == NODEPAGE_BELTSLOTS) {
-				char* code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
-				if (code[0] == startChars[0] && code[1] == startChars[1] && code[2] < minPotion) {
+				pItem->pItemData->ItemLocation == STORAGE_NULL && pItem->pItemData->NodePage == NODEPAGE_BELTSLOTS)
+			{
+				char *code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
+				if (code[0] == startChars[0] && code[1] == startChars[1] && code[2] < minPotion)
+				{
 					minPotion = code[2];
 					minItemId = pItem->dwUnitId;
 					isBelt = pItem->pItemData->NodePage == NODEPAGE_BELTSLOTS;
 				}
 			}
-			//char *code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
-			//if (code[0] == 'b' && code[1] == 'o' && code[2] == 'x') {
+			// char *code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
+			// if (code[0] == 'b' && code[1] == 'o' && code[2] == 'x') {
 			//	// Hack to pick up cube to fix cube-in-cube problem
 			//	BYTE PacketDataCube[5] = {0x19,0,0,0,0};
 			//	*reinterpret_cast<int*>(PacketDataCube + 1) = pItem->dwUnitId;
 			//	D2NET_SendPacket(5, 1, PacketDataCube);
 			//	break;
-			//}
+			// }
 		}
-		if (minItemId > 0) {
-			if (isBelt){
-				BYTE PacketData[13] = { 0x26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-				*reinterpret_cast<int*>(PacketData + 1) = minItemId;
+		if (minItemId > 0)
+		{
+			if (isBelt)
+			{
+				BYTE PacketData[13] = {0x26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+				*reinterpret_cast<int *>(PacketData + 1) = minItemId;
 				D2NET_SendPacket(13, 0, PacketData);
 			}
-			else{
-				//PrintText(1, "Sending packet %d, %d, %d", minItemId, unit->pPath->xPos, unit->pPath->yPos);
-				BYTE PacketData[13] = { 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-				*reinterpret_cast<int*>(PacketData + 1) = minItemId;
-				*reinterpret_cast<WORD*>(PacketData + 5) = (WORD)unit->pPath->xPos;
-				*reinterpret_cast<WORD*>(PacketData + 9) = (WORD)unit->pPath->yPos;
+			else
+			{
+				// PrintText(1, "Sending packet %d, %d, %d", minItemId, unit->pPath->xPos, unit->pPath->yPos);
+				BYTE PacketData[13] = {0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+				*reinterpret_cast<int *>(PacketData + 1) = minItemId;
+				*reinterpret_cast<WORD *>(PacketData + 5) = (WORD)unit->pPath->xPos;
+				*reinterpret_cast<WORD *>(PacketData + 9) = (WORD)unit->pPath->yPos;
 				D2NET_SendPacket(13, 0, PacketData);
 			}
 			*block = true;
 		}
 	}
-	if (!up && (key == TpKey)) {
+	if (!up && (key == TpKey))
+	{
 		DWORD tpId = 0;
 		int tp_quantity = 0;
-		for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem) {
-			if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY) {
-				char* code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
-				if (code[0] == 't' && code[1] == 'b' && code[2] =='k') {
+		for (UnitAny *pItem = unit->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem)
+		{
+			if (pItem->pItemData->ItemLocation == STORAGE_INVENTORY)
+			{
+				char *code = D2COMMON_GetItemText(pItem->dwTxtFileNo)->szCode;
+				if (code[0] == 't' && code[1] == 'b' && code[2] == 'k')
+				{
 					tp_quantity = D2COMMON_GetUnitStat(pItem, STAT_AMMOQUANTITY, 0);
-					if (tp_quantity > 0) {
+					if (tp_quantity > 0)
+					{
 						tpId = pItem->dwUnitId;
 						break;
 					}
 				}
 			}
 		}
-		if (tpId > 0) {
-			BYTE PacketData[13] = { 0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-			*reinterpret_cast<int*>(PacketData + 1) = tpId;
-			*reinterpret_cast<WORD*>(PacketData + 5) = (WORD)unit->pPath->xPos;
-			*reinterpret_cast<WORD*>(PacketData + 9) = (WORD)unit->pPath->yPos;
-			if (tp_quantity < tp_warn_quantity) {
+		if (tpId > 0)
+		{
+			BYTE PacketData[13] = {0x20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+			*reinterpret_cast<int *>(PacketData + 1) = tpId;
+			*reinterpret_cast<WORD *>(PacketData + 5) = (WORD)unit->pPath->xPos;
+			*reinterpret_cast<WORD *>(PacketData + 9) = (WORD)unit->pPath->yPos;
+			if (tp_quantity < tp_warn_quantity)
+			{
 				PrintText(Red, "TP tome is running low!");
 			}
 			D2NET_SendPacket(13, 0, PacketData);
@@ -587,161 +893,217 @@ void ItemMover::OnKey(bool up, BYTE key, LPARAM lParam, bool* block)  {
 	}
 }
 
-void ItemMover::OnGamePacketRecv(BYTE* packet, bool* block) {
+void ItemMover::OnGamePacketRecv(BYTE *packet, bool *block)
+{
 	switch (packet[0])
 	{
 	case 0x3F:
+	{
+		// We get this packet after our cursor change. Will only ID if we found book and item previously. packet[1] = 0 guarantees the cursor is changing to "id ready" state.
+		if (packet[1] == 0 && idBookId > 0 && unidItemId > 0)
 		{
-			// We get this packet after our cursor change. Will only ID if we found book and item previously. packet[1] = 0 guarantees the cursor is changing to "id ready" state.
-			if (packet[1] == 0 && idBookId > 0 && unidItemId > 0) {
-				BYTE PacketData[9] = {0x27,0,0,0,0,0,0,0,0};
-				*reinterpret_cast<int*>(PacketData + 1) = unidItemId;
-				*reinterpret_cast<int*>(PacketData + 5) = idBookId;
-				D2NET_SendPacket(9, 0, PacketData);
-				*block = true;
-				// Reseting variables after we ID an item so the next ID works.
-				unidItemId = 0;
-				idBookId = 0;
-			}
-			break;
+			BYTE PacketData[9] = {0x27, 0, 0, 0, 0, 0, 0, 0, 0};
+			*reinterpret_cast<int *>(PacketData + 1) = unidItemId;
+			*reinterpret_cast<int *>(PacketData + 5) = idBookId;
+			D2NET_SendPacket(9, 0, PacketData);
+			*block = true;
+			// Reseting variables after we ID an item so the next ID works.
+			unidItemId = 0;
+			idBookId = 0;
 		}
+		break;
+	}
 	case 0x9c:
+	{
+		// We get this packet after placing an item in a container or on the ground
+		if (FirstInit)
 		{
-			// We get this packet after placing an item in a container or on the ground
-			if (FirstInit) {
-				BYTE action = packet[1];
-				unsigned int itemId = *(unsigned int*)&packet[4];
-				Lock();
-				if (itemId == ActivePacket.itemId) {
-					//PrintText(1, "Placed item id %d", itemId);
-					ActivePacket.itemId = 0;
-					ActivePacket.x = 0;
-					ActivePacket.y = 0;
-					ActivePacket.startTicks = 0;
-					ActivePacket.destination = 0;
-				}
-				if (isMovingItem) {
-					isMovingItem = false;
-					if (D2CLIENT_GetCursorItem() == 0) {
-						MoveNextItem(block);
-					}
-				}
-				Unlock();
+			BYTE action = packet[1];
+			unsigned int itemId = *(unsigned int *)&packet[4];
 
+			wchar_t recvMsg[256];
+			swprintf(recvMsg, L"[ItemMover] Received 0x9c packet: action=%d, itemId=%d", action, itemId);
+			D2CLIENT_PrintGameString(recvMsg, 0);
+
+			Lock();
+			if (itemId == ActivePacket.itemId)
+			{
+				wchar_t completeMsg[256];
+				swprintf(completeMsg, L"[ItemMover] Item placement confirmed for ID %d", itemId);
+				D2CLIENT_PrintGameString(completeMsg, 0);
+
+				UnitAny *cursorItem = D2CLIENT_GetCursorItem();
+				if (cursorItem)
+				{
+					wchar_t cursorMsg[256];
+					swprintf(cursorMsg, L"[ItemMover] Cursor still has item ID %d after placement", cursorItem->dwUnitId);
+					D2CLIENT_PrintGameString(cursorMsg, 0);
+				}
+				else
+				{
+					D2CLIENT_PrintGameString(L"[ItemMover] Cursor cleared successfully", 0);
+				}
+
+				// PrintText(1, "Placed item id %d", itemId);
+				ActivePacket.itemId = 0;
+				ActivePacket.x = 0;
+				ActivePacket.y = 0;
+				ActivePacket.startTicks = 0;
+				ActivePacket.destination = 0;
+				ActivePacket.targetItemId = 0;
 			}
+			else
+			{
+				wchar_t mismatchMsg[256];
+				swprintf(mismatchMsg, L"[ItemMover] Item ID mismatch: received %d, expected %d", itemId, ActivePacket.itemId);
+				D2CLIENT_PrintGameString(mismatchMsg, 0);
+			}
+			if (isMovingItem)
+			{
+				isMovingItem = false;
+				if (D2CLIENT_GetCursorItem() == 0)
+				{
+					MoveNextItem(block);
+				}
+			}
+			Unlock();
+		}
 
-			if ((*BH::MiscToggles2)["Advanced Item Display"].state) {
-				bool success = true;
-				ItemInfo item = {};
-				ParseItem((unsigned char*)packet, &item, &success);
-				//PrintText(1, "Item packet: %s, %s, %X, %d, %d", item.name.c_str(), item.code, item.attrs->flags, item.sockets, GetDefense(&item));
-				if ((item.action == ITEM_ACTION_NEW_GROUND || item.action == ITEM_ACTION_OLD_GROUND) && success) {
-					bool showOnMap = false;
-					bool nameWhitelisted = false;
-					bool noTracking = false;
-					auto pingLevel = -1;
-					auto color = UNDEFINED_COLOR;
+		if ((*BH::MiscToggles2)["Advanced Item Display"].state)
+		{
+			bool success = true;
+			ItemInfo item = {};
+			ParseItem((unsigned char *)packet, &item, &success);
+			// PrintText(1, "Item packet: %s, %s, %X, %d, %d", item.name.c_str(), item.code, item.attrs->flags, item.sockets, GetDefense(&item));
+			if ((item.action == ITEM_ACTION_NEW_GROUND || item.action == ITEM_ACTION_OLD_GROUND) && success)
+			{
+				bool showOnMap = false;
+				bool nameWhitelisted = false;
+				bool noTracking = false;
+				auto pingLevel = -1;
+				auto color = UNDEFINED_COLOR;
 
-					for (vector<Rule*>::iterator it = MapRuleList.begin(); it != MapRuleList.end(); it++) {
-						if ((*it)->Evaluate(NULL, &item)) {
-							nameWhitelisted = true;
-							// skip map and notification if ping level requirement is not met
-							if ((*it)->action.pingLevel > Item::GetPingLevel()) continue;
-							auto action_color = (*it)->action.notifyColor;
-							// never overwrite color with an undefined color. never overwrite a defined color with dead color.
-							if (action_color != UNDEFINED_COLOR && (action_color != DEAD_COLOR || color == UNDEFINED_COLOR))
-								color = action_color;
-							showOnMap = true;
-							noTracking = (*it)->action.noTracking;
-							pingLevel = (*it)->action.pingLevel;
-							// break unless %CONTINUE% is used
-							if ((*it)->action.stopProcessing) break;
-						}
+				for (vector<Rule *>::iterator it = MapRuleList.begin(); it != MapRuleList.end(); it++)
+				{
+					if ((*it)->Evaluate(NULL, &item))
+					{
+						nameWhitelisted = true;
+						// skip map and notification if ping level requirement is not met
+						if ((*it)->action.pingLevel > Item::GetPingLevel())
+							continue;
+						auto action_color = (*it)->action.notifyColor;
+						// never overwrite color with an undefined color. never overwrite a defined color with dead color.
+						if (action_color != UNDEFINED_COLOR && (action_color != DEAD_COLOR || color == UNDEFINED_COLOR))
+							color = action_color;
+						showOnMap = true;
+						noTracking = (*it)->action.noTracking;
+						pingLevel = (*it)->action.pingLevel;
+						// break unless %CONTINUE% is used
+						if ((*it)->action.stopProcessing)
+							break;
 					}
-					// Don't block items that have a white-listed name
-					for (vector<Rule*>::iterator it = DoNotBlockRuleList.begin(); it != DoNotBlockRuleList.end(); it++) {
-						if ((*it)->Evaluate(NULL, &item)) {
-							nameWhitelisted = true;
+				}
+				// Don't block items that have a white-listed name
+				for (vector<Rule *>::iterator it = DoNotBlockRuleList.begin(); it != DoNotBlockRuleList.end(); it++)
+				{
+					if ((*it)->Evaluate(NULL, &item))
+					{
+						nameWhitelisted = true;
+						break;
+					}
+				}
+				// PrintText(1, "Item on ground: %s, %s, %s, %X", item.name.c_str(), item.code, item.attrs->category.c_str(), item.attrs->flags);
+				if (showOnMap && !(*BH::MiscToggles2)["Item Detailed Notifications"].state)
+				{
+					if (!noTracking && !IsTown(GetPlayerArea()) && pingLevel <= Item::GetTrackerPingLevel())
+					{
+						ScreenInfo::AddDrop(item.name.c_str(), item.x, item.y);
+					}
+					if (color == UNDEFINED_COLOR)
+					{
+						color = ItemColorFromQuality(item.quality);
+					}
+					if ((*BH::MiscToggles2)["Item Drop Notifications"].state &&
+						item.action == ITEM_ACTION_NEW_GROUND &&
+						color != DEAD_COLOR)
+					{
+						PrintText(color, "%s%s",
+								  item.name.c_str(),
+								  (*BH::MiscToggles2)["Verbose Notifications"].state ? " \377c5drop" : "");
+					}
+					if ((*BH::MiscToggles2)["Item Close Notifications"].state &&
+						item.action == ITEM_ACTION_OLD_GROUND &&
+						color != DEAD_COLOR)
+					{
+						PrintText(color, "%s%s",
+								  item.name.c_str(),
+								  (*BH::MiscToggles2)["Verbose Notifications"].state ? " \377c5close" : "");
+					}
+				}
+				else if (!showOnMap && !nameWhitelisted)
+				{
+					for (vector<Rule *>::iterator it = IgnoreRuleList.begin(); it != IgnoreRuleList.end(); it++)
+					{
+						if ((*it)->Evaluate(NULL, &item))
+						{
+							*block = true;
+							// PrintText(1, "Blocking item: %s, %s, %d", item.name.c_str(), item.code, item.amount);
 							break;
 						}
 					}
-					//PrintText(1, "Item on ground: %s, %s, %s, %X", item.name.c_str(), item.code, item.attrs->category.c_str(), item.attrs->flags);
-					if(showOnMap && !(*BH::MiscToggles2)["Item Detailed Notifications"].state) {
-						if (!noTracking && !IsTown(GetPlayerArea()) && pingLevel <= Item::GetTrackerPingLevel()) {
-							ScreenInfo::AddDrop(item.name.c_str(), item.x, item.y);
-						}
-						if (color == UNDEFINED_COLOR) {
-							color = ItemColorFromQuality(item.quality);
-						}
-						if ((*BH::MiscToggles2)["Item Drop Notifications"].state &&
-								item.action == ITEM_ACTION_NEW_GROUND &&
-								color != DEAD_COLOR
-							 ) {
-							PrintText(color, "%s%s",
-									item.name.c_str(),
-									(*BH::MiscToggles2)["Verbose Notifications"].state ? " \377c5drop" : ""
-									);
-						}
-						if ((*BH::MiscToggles2)["Item Close Notifications"].state &&
-								item.action == ITEM_ACTION_OLD_GROUND &&
-								color != DEAD_COLOR
-							 ) {
-							PrintText(color, "%s%s",
-									item.name.c_str(),
-									(*BH::MiscToggles2)["Verbose Notifications"].state ? " \377c5close" : ""
-									);
-						}
-					}
-					else if (!showOnMap && !nameWhitelisted) {
-						for (vector<Rule*>::iterator it = IgnoreRuleList.begin(); it != IgnoreRuleList.end(); it++) {
-							if ((*it)->Evaluate(NULL, &item)) {
-								*block = true;
-								//PrintText(1, "Blocking item: %s, %s, %d", item.name.c_str(), item.code, item.amount);
-								break;
-							}
-						}
-					}
 				}
 			}
-			break;
 		}
+		break;
+	}
 	case 0x9d:
+	{
+		// We get this packet after picking up an item
+		if (FirstInit)
 		{
-			// We get this packet after picking up an item
-			if (FirstInit) {
-				BYTE action = packet[1];
-				unsigned int itemId = *(unsigned int*)&packet[4];
-				Lock();
-				if (itemId == ActivePacket.itemId) {
-					//PrintText(2, "Picked up item id %d", itemId);
-					if (ActivePacket.destination == STORAGE_NULL) {
-						PutItemOnGround();
-					} else {
-						PutItemInContainer();
-					}
+			BYTE action = packet[1];
+			unsigned int itemId = *(unsigned int *)&packet[4];
+			Lock();
+			if (itemId == ActivePacket.itemId)
+			{
+				// PrintText(2, "Picked up item id %d", itemId);
+				if (ActivePacket.destination == STORAGE_NULL)
+				{
+					PutItemOnGround();
 				}
-				Unlock();
+				else
+				{
+					D2CLIENT_PrintGameString(L"[ItemMover] Attempting to place in container", 0);
+
+					PutItemInContainer();
+				}
 			}
-			break;
+			Unlock();
 		}
+		break;
+	}
 	default:
 		break;
 	}
 	return;
 }
 
-void ItemMover::OnGameExit() {
+void ItemMover::OnGameExit()
+{
 	ActivePacket.itemId = 0;
 	ActivePacket.x = 0;
 	ActivePacket.y = 0;
 	ActivePacket.startTicks = 0;
 	ActivePacket.destination = 0;
+	ActivePacket.targetItemId = 0;
 }
 
 // Code for reading the 0x9c bitstream (borrowed from heroin_glands)
-void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
+void ParseItem(const unsigned char *data, ItemInfo *item, bool *success)
+{
 	*success = true;
-	try {
+	try
+	{
 		BitReader reader(data);
 		unsigned long packet = reader.read(8);
 		item->action = reader.read(8);
@@ -749,7 +1111,8 @@ void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
 		item->category = reader.read(8); // item type
 		item->id = reader.read(32);
 
-		if (packet == 0x9d) {
+		if (packet == 0x9d)
+		{
 			reader.read(32);
 			reader.read(8);
 		}
@@ -793,10 +1156,13 @@ void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
 
 		item->ground = (destination == 0x03);
 
-		if (item->ground) {
+		if (item->ground)
+		{
 			item->x = reader.read(16);
 			item->y = reader.read(16);
-		} else {
+		}
+		else
+		{
 			item->directory = reader.read(4);
 			item->x = reader.read(4);
 			item->y = reader.read(3);
@@ -805,39 +1171,52 @@ void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
 
 		item->unspecifiedDirectory = false;
 
-		if (item->action == ITEM_ACTION_TO_STORE || item->action == ITEM_ACTION_FROM_STORE) {
+		if (item->action == ITEM_ACTION_TO_STORE || item->action == ITEM_ACTION_FROM_STORE)
+		{
 			long container = static_cast<long>(item->container);
 			container |= 0x80;
-			if (container & 1) {
-				container--; //remove first bit
+			if (container & 1)
+			{
+				container--; // remove first bit
 				item->y += 8;
 			}
 			item->container = static_cast<unsigned int>(container);
-		} else if (item->container == CONTAINER_UNSPECIFIED) {
-			if (item->directory == EQUIP_NONE) {
-				if (item->inSocket) {
-					//y is ignored for this container type, x tells you the index
+		}
+		else if (item->container == CONTAINER_UNSPECIFIED)
+		{
+			if (item->directory == EQUIP_NONE)
+			{
+				if (item->inSocket)
+				{
+					// y is ignored for this container type, x tells you the index
 					item->container = CONTAINER_ITEM;
-				} else if (item->action == ITEM_ACTION_PLACE_BELT || item->action == ITEM_ACTION_REMOVE_BELT) {
+				}
+				else if (item->action == ITEM_ACTION_PLACE_BELT || item->action == ITEM_ACTION_REMOVE_BELT)
+				{
 					item->container = CONTAINER_BELT;
 					item->y = item->x / 4;
 					item->x %= 4;
 				}
-			} else {
+			}
+			else
+			{
 				item->unspecifiedDirectory = true;
 			}
 		}
 
-		if (item->ear) {
+		if (item->ear)
+		{
 			item->earClass = static_cast<BYTE>(reader.read(3));
 			item->earLevel = reader.read(7);
 			item->code[0] = 'e';
 			item->code[1] = 'a';
 			item->code[2] = 'r';
 			item->code[3] = 0;
-			for (std::size_t i = 0; i < 16; i++) {
+			for (std::size_t i = 0; i < 16; i++)
+			{
 				char letter = static_cast<char>(reader.read(7));
-				if (letter == 0) {
+				if (letter == 0)
+				{
 					break;
 				}
 				item->earName.push_back(letter);
@@ -846,16 +1225,18 @@ void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
 			item->name = item->attrs->name;
 			item->width = item->attrs->width;
 			item->height = item->attrs->height;
-			//PrintText(1, "Ear packet: %s, %s, %d, %d", item->earName.c_str(), item->code, item->earClass, item->earLevel);
+			// PrintText(1, "Ear packet: %s, %s, %d, %d", item->earName.c_str(), item->code, item->earClass, item->earLevel);
 			return;
 		}
 
-		for (std::size_t i = 0; i < 4; i++) {
+		for (std::size_t i = 0; i < 4; i++)
+		{
 			item->code[i] = static_cast<char>(reader.read(8));
 		}
 		item->code[3] = 0;
 
-		if (ItemAttributeMap.find(item->code) == ItemAttributeMap.end()) {
+		if (ItemAttributeMap.find(item->code) == ItemAttributeMap.end())
+		{
 			HandleUnknownItemCode(item->code, "from packet");
 			*success = false;
 			return;
@@ -867,11 +1248,15 @@ void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
 
 		item->isGold = (item->code[0] == 'g' && item->code[1] == 'l' && item->code[2] == 'd');
 
-		if (item->isGold) {
+		if (item->isGold)
+		{
 			bool big_pile = reader.readBool();
-			if (big_pile) {
+			if (big_pile)
+			{
 				item->amount = reader.read(32);
-			} else {
+			}
+			else
+			{
 				item->amount = reader.read(12);
 			}
 			return;
@@ -879,25 +1264,31 @@ void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
 
 		item->usedSockets = (BYTE)reader.read(3);
 
-		if (item->simpleItem || item->gambling) {
+		if (item->simpleItem || item->gambling)
+		{
 			return;
 		}
 
 		item->level = (BYTE)reader.read(7);
 		item->quality = static_cast<unsigned int>(reader.read(4));
 
-		item->hasGraphic = reader.readBool();;
-		if (item->hasGraphic) {
+		item->hasGraphic = reader.readBool();
+		;
+		if (item->hasGraphic)
+		{
 			item->graphic = reader.read(3);
 		}
 
 		item->hasColor = reader.readBool();
-		if (item->hasColor) {
+		if (item->hasColor)
+		{
 			item->color = reader.read(11);
 		}
 
-		if (item->identified) {
-			switch(item->quality) {
+		if (item->identified)
+		{
+			switch (item->quality)
+			{
 			case ITEM_QUALITY_INFERIOR:
 				item->prefix = reader.read(3);
 				break;
@@ -922,44 +1313,54 @@ void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
 				break;
 
 			case ITEM_QUALITY_UNIQUE:
-				if (item->code[0] != 's' || item->code[1] != 't' || item->code[2] != 'd') { //standard of heroes exception?
+				if (item->code[0] != 's' || item->code[1] != 't' || item->code[2] != 'd')
+				{ // standard of heroes exception?
 					item->uniqueCode = reader.read(12);
 				}
 				break;
 			}
 		}
 
-		if (item->quality == ITEM_QUALITY_RARE || item->quality == ITEM_QUALITY_CRAFT) {
-			for (unsigned long i = 0; i < 3; i++) {
-				if (reader.readBool()) {
+		if (item->quality == ITEM_QUALITY_RARE || item->quality == ITEM_QUALITY_CRAFT)
+		{
+			for (unsigned long i = 0; i < 3; i++)
+			{
+				if (reader.readBool())
+				{
 					item->prefixes.push_back(reader.read(11));
 				}
-				if (reader.readBool()) {
+				if (reader.readBool())
+				{
 					item->suffixes.push_back(reader.read(11));
 				}
 			}
 		}
 
-		if (item->runeword) {
+		if (item->runeword)
+		{
 			item->runewordId = reader.read(12);
 			item->runewordParameter = reader.read(4);
 		}
 
-		if (item->personalized) {
-			for (std::size_t i = 0; i < 16; i++) {
+		if (item->personalized)
+		{
+			for (std::size_t i = 0; i < 16; i++)
+			{
 				char letter = static_cast<char>(reader.read(7));
-				if (letter == 0) {
+				if (letter == 0)
+				{
 					break;
 				}
 				item->personalizedName.push_back(letter);
 			}
-			//PrintText(1, "Personalized packet: %s, %s", item->personalizedName.c_str(), item->code);
+			// PrintText(1, "Personalized packet: %s, %s", item->personalizedName.c_str(), item->code);
 		}
 
 		item->isArmor = (item->attrs->flags & ITEM_GROUP_ALLARMOR) > 0;
 		item->isWeapon = (item->attrs->flags & ITEM_GROUP_ALLWEAPON) > 0;
 
-		if (item->isArmor) {
+		if (item->isArmor)
+		{
 			item->defense = reader.read(11) - 10;
 		}
 
@@ -968,67 +1369,86 @@ void ParseItem(const unsigned char *data, ItemInfo *item, bool *success) {
 			reader.read(9);
 			reader.read(17);
 		} else */
-		//special case: indestructible phase blade
-		if (item->code[0] == '7' && item->code[1] == 'c' && item->code[2] == 'r') {
+		// special case: indestructible phase blade
+		if (item->code[0] == '7' && item->code[1] == 'c' && item->code[2] == 'r')
+		{
 			reader.read(8);
-		} else if (item->isArmor || item->isWeapon) {
+		}
+		else if (item->isArmor || item->isWeapon)
+		{
 			item->maxDurability = reader.read(8);
 			item->indestructible = item->maxDurability == 0;
 			/*if (!item->indestructible) {
 				item->durability = reader.read(8);
 				reader.readBool();
 			}*/
-			//D2Hackit always reads it, hmmm. Appears to work.
+			// D2Hackit always reads it, hmmm. Appears to work.
 			item->durability = reader.read(8);
 			reader.readBool();
 		}
 
-		if (item->hasSockets) {
+		if (item->hasSockets)
+		{
 			item->sockets = (BYTE)reader.read(4);
 		}
 
-		if (!item->identified) {
+		if (!item->identified)
+		{
 			return;
 		}
 
-		if (item->attrs->stackable) {
-			if (item->attrs->useable) {
+		if (item->attrs->stackable)
+		{
+			if (item->attrs->useable)
+			{
 				reader.read(5);
 			}
 			item->amount = reader.read(9);
 		}
 
-		if (item->quality == ITEM_QUALITY_SET) {
+		if (item->quality == ITEM_QUALITY_SET)
+		{
 			unsigned long set_mods = reader.read(5);
 		}
 
-		while (true) {
+		while (true)
+		{
 			unsigned long stat_id = reader.read(9);
-			if (stat_id == 0x1ff) {
+			if (stat_id == 0x1ff)
+			{
 				break;
 			}
 			ItemProperty prop = {};
 			if (!ProcessStat(stat_id, reader, prop) &&
-					!(*BH::MiscToggles2)["Suppress Invalid Stats"].state) {
+				!(*BH::MiscToggles2)["Suppress Invalid Stats"].state)
+			{
 				PrintText(1, "Invalid stat: %d, %c%c%c", stat_id, item->code[0], item->code[1], item->code[2]);
 				*success = false;
 				break;
 			}
 			item->properties.push_back(prop);
 		}
-	} catch (int e) {
+	}
+	catch (int e)
+	{
 		PrintText(1, "Int exception parsing item: %c%c%c, %d", item->code[0], item->code[1], item->code[2], e);
-	} catch (std::exception const & ex) {
+	}
+	catch (std::exception const &ex)
+	{
 		PrintText(1, "Exception parsing item: %c%c%c, %s", item->code[0], item->code[1], item->code[2], ex.what());
-	} catch(...) {
+	}
+	catch (...)
+	{
 		PrintText(1, "Miscellaneous exception parsing item: %c%c%c", item->code[0], item->code[1], item->code[2]);
 		*success = false;
 	}
 	return;
 }
 
-bool ProcessStat(unsigned int stat, BitReader &reader, ItemProperty &itemProp) {
-	if (stat > STAT_MAX) {
+bool ProcessStat(unsigned int stat, BitReader &reader, ItemProperty &itemProp)
+{
+	if (stat > STAT_MAX)
+	{
 		return false;
 	}
 
@@ -1038,138 +1458,142 @@ bool ProcessStat(unsigned int stat, BitReader &reader, ItemProperty &itemProp) {
 	unsigned int saveAdd = bits->saveAdd;
 	itemProp.stat = stat;
 
-	if (saveParamBits > 0) {
-		switch (stat) {
-			case STAT_CLASSSKILLS:
-			{
-				itemProp.characterClass = reader.read(saveParamBits);
-				itemProp.value = reader.read(saveBits);
-				return true;
-			}
-			case STAT_NONCLASSSKILL:
-			case STAT_SINGLESKILL:
-			{
-				itemProp.skill = reader.read(saveParamBits);
-				itemProp.value = reader.read(saveBits);
-				return true;
-			}
-			case STAT_ELEMENTALSKILLS:
-			{
-				ulong element = reader.read(saveParamBits);
-				itemProp.value = reader.read(saveBits);
-				return true;
-			}
-			case STAT_AURA:
-			{
-				itemProp.skill = reader.read(saveParamBits);
-				itemProp.value = reader.read(saveBits);
-				return true;
-			}
-			case STAT_REANIMATE:
-			{
-				itemProp.monster = reader.read(saveParamBits);
-				itemProp.value = reader.read(saveBits);
-				return true;
-			}
-			case STAT_SKILLTAB:
-			{
-				itemProp.tab = reader.read(3);
-				itemProp.characterClass = reader.read(3);
-				ulong unknown = reader.read(10);
-				itemProp.value = reader.read(saveBits);
-				return true;
-			}
-			case STAT_SKILLONDEATH:
-			case STAT_SKILLONHIT:
-			case STAT_SKILLONKILL:
-			case STAT_SKILLONLEVELUP:
-			case STAT_SKILLONSTRIKING:
-			case STAT_SKILLWHENSTRUCK:
-			{
-				itemProp.level = reader.read(6);
-				itemProp.skill = reader.read(10);
-				itemProp.skillChance = reader.read(saveBits);
-				return true;
-			}
-			case STAT_CHARGED:
-			{
-				itemProp.level = reader.read(6);
-				itemProp.skill = reader.read(10);
-				itemProp.charges = reader.read(8);
-				itemProp.maximumCharges = reader.read(8);
-				return true;
-			}
-			case STAT_STATE:
-			case STAT_ATTCKRTNGVSMONSTERTYPE:
-			case STAT_DAMAGETOMONSTERTYPE:
-			{
-				// For some reason heroin_glands doesn't read these, even though
-				// they have saveParamBits; maybe they don't occur in practice?
-				itemProp.value = reader.read(saveBits) - saveAdd;
-				return true;
-			}
-			default:
-				reader.read(saveParamBits);
-				reader.read(saveBits);
-				return true;
+	if (saveParamBits > 0)
+	{
+		switch (stat)
+		{
+		case STAT_CLASSSKILLS:
+		{
+			itemProp.characterClass = reader.read(saveParamBits);
+			itemProp.value = reader.read(saveBits);
+			return true;
+		}
+		case STAT_NONCLASSSKILL:
+		case STAT_SINGLESKILL:
+		{
+			itemProp.skill = reader.read(saveParamBits);
+			itemProp.value = reader.read(saveBits);
+			return true;
+		}
+		case STAT_ELEMENTALSKILLS:
+		{
+			ulong element = reader.read(saveParamBits);
+			itemProp.value = reader.read(saveBits);
+			return true;
+		}
+		case STAT_AURA:
+		{
+			itemProp.skill = reader.read(saveParamBits);
+			itemProp.value = reader.read(saveBits);
+			return true;
+		}
+		case STAT_REANIMATE:
+		{
+			itemProp.monster = reader.read(saveParamBits);
+			itemProp.value = reader.read(saveBits);
+			return true;
+		}
+		case STAT_SKILLTAB:
+		{
+			itemProp.tab = reader.read(3);
+			itemProp.characterClass = reader.read(3);
+			ulong unknown = reader.read(10);
+			itemProp.value = reader.read(saveBits);
+			return true;
+		}
+		case STAT_SKILLONDEATH:
+		case STAT_SKILLONHIT:
+		case STAT_SKILLONKILL:
+		case STAT_SKILLONLEVELUP:
+		case STAT_SKILLONSTRIKING:
+		case STAT_SKILLWHENSTRUCK:
+		{
+			itemProp.level = reader.read(6);
+			itemProp.skill = reader.read(10);
+			itemProp.skillChance = reader.read(saveBits);
+			return true;
+		}
+		case STAT_CHARGED:
+		{
+			itemProp.level = reader.read(6);
+			itemProp.skill = reader.read(10);
+			itemProp.charges = reader.read(8);
+			itemProp.maximumCharges = reader.read(8);
+			return true;
+		}
+		case STAT_STATE:
+		case STAT_ATTCKRTNGVSMONSTERTYPE:
+		case STAT_DAMAGETOMONSTERTYPE:
+		{
+			// For some reason heroin_glands doesn't read these, even though
+			// they have saveParamBits; maybe they don't occur in practice?
+			itemProp.value = reader.read(saveBits) - saveAdd;
+			return true;
+		}
+		default:
+			reader.read(saveParamBits);
+			reader.read(saveBits);
+			return true;
 		}
 	}
 
-	if (bits->op >= 2 && bits->op <= 5) {
+	if (bits->op >= 2 && bits->op <= 5)
+	{
 		itemProp.perLevel = reader.read(saveBits);
 		return true;
 	}
 
-	switch (stat) {
-		case STAT_ENHANCEDMAXIMUMDAMAGE:
-		case STAT_ENHANCEDMINIMUMDAMAGE:
-		{
-			itemProp.minimum = reader.read(saveBits);
-			itemProp.maximum = reader.read(saveBits);
-			return true;
-		}
-		case STAT_MINIMUMFIREDAMAGE:
-		{
-			itemProp.minimum = reader.read(saveBits);
-			itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMFIREDAMAGE)->saveBits);
-			return true;
-		}
-		case STAT_MINIMUMLIGHTNINGDAMAGE:
-		{
-			itemProp.minimum = reader.read(saveBits);
-			itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMLIGHTNINGDAMAGE)->saveBits);
-			return true;
-		}
-		case STAT_MINIMUMMAGICALDAMAGE:
-		{
-			itemProp.minimum = reader.read(saveBits);
-			itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMMAGICALDAMAGE)->saveBits);
-			return true;
-		}
-		case STAT_MINIMUMCOLDDAMAGE:
-		{
-			itemProp.minimum = reader.read(saveBits);
-			itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMCOLDDAMAGE)->saveBits);
-			itemProp.length = reader.read(GetStatProperties(STAT_COLDDAMAGELENGTH)->saveBits);
-			return true;
-		}
-		case STAT_MINIMUMPOISONDAMAGE:
-		{
-			itemProp.minimum = reader.read(saveBits);
-			itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMPOISONDAMAGE)->saveBits);
-			itemProp.length = reader.read(GetStatProperties(STAT_POISONDAMAGELENGTH)->saveBits);
-			return true;
-		}
-		case STAT_REPAIRSDURABILITY:
-		case STAT_REPLENISHESQUANTITY:
-		{
-			itemProp.value = reader.read(saveBits);
-			return true;
-		}
-		default:
-		{
-			itemProp.value = reader.read(saveBits) - saveAdd;
-			return true;
-		}
+	switch (stat)
+	{
+	case STAT_ENHANCEDMAXIMUMDAMAGE:
+	case STAT_ENHANCEDMINIMUMDAMAGE:
+	{
+		itemProp.minimum = reader.read(saveBits);
+		itemProp.maximum = reader.read(saveBits);
+		return true;
+	}
+	case STAT_MINIMUMFIREDAMAGE:
+	{
+		itemProp.minimum = reader.read(saveBits);
+		itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMFIREDAMAGE)->saveBits);
+		return true;
+	}
+	case STAT_MINIMUMLIGHTNINGDAMAGE:
+	{
+		itemProp.minimum = reader.read(saveBits);
+		itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMLIGHTNINGDAMAGE)->saveBits);
+		return true;
+	}
+	case STAT_MINIMUMMAGICALDAMAGE:
+	{
+		itemProp.minimum = reader.read(saveBits);
+		itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMMAGICALDAMAGE)->saveBits);
+		return true;
+	}
+	case STAT_MINIMUMCOLDDAMAGE:
+	{
+		itemProp.minimum = reader.read(saveBits);
+		itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMCOLDDAMAGE)->saveBits);
+		itemProp.length = reader.read(GetStatProperties(STAT_COLDDAMAGELENGTH)->saveBits);
+		return true;
+	}
+	case STAT_MINIMUMPOISONDAMAGE:
+	{
+		itemProp.minimum = reader.read(saveBits);
+		itemProp.maximum = reader.read(GetStatProperties(STAT_MAXIMUMPOISONDAMAGE)->saveBits);
+		itemProp.length = reader.read(GetStatProperties(STAT_POISONDAMAGELENGTH)->saveBits);
+		return true;
+	}
+	case STAT_REPAIRSDURABILITY:
+	case STAT_REPLENISHESQUANTITY:
+	{
+		itemProp.value = reader.read(saveBits);
+		return true;
+	}
+	default:
+	{
+		itemProp.value = reader.read(saveBits) - saveAdd;
+		return true;
+	}
 	}
 }
