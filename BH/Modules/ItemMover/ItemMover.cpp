@@ -922,27 +922,18 @@ void ItemMover::OnGamePacketRecv(BYTE *packet, bool *block)
 			unsigned int itemId = *(unsigned int *)&packet[4];
 
 			wchar_t recvMsg[256];
-			swprintf(recvMsg, L"[ItemMover] Received 0x9c packet: action=%d, itemId=%d", action, itemId);
-			D2CLIENT_PrintGameString(recvMsg, 0);
 
 			Lock();
 			if (itemId == ActivePacket.itemId)
 			{
 				wchar_t completeMsg[256];
-				swprintf(completeMsg, L"[ItemMover] Item placement confirmed for ID %d", itemId);
-				D2CLIENT_PrintGameString(completeMsg, 0);
 
 				UnitAny *cursorItem = D2CLIENT_GetCursorItem();
 				if (cursorItem)
 				{
 					wchar_t cursorMsg[256];
-					swprintf(cursorMsg, L"[ItemMover] Cursor still has item ID %d after placement", cursorItem->dwUnitId);
-					D2CLIENT_PrintGameString(cursorMsg, 0);
 				}
-				else
-				{
-					D2CLIENT_PrintGameString(L"[ItemMover] Cursor cleared successfully", 0);
-				}
+			
 
 				// PrintText(1, "Placed item id %d", itemId);
 				ActivePacket.itemId = 0;
@@ -955,8 +946,6 @@ void ItemMover::OnGamePacketRecv(BYTE *packet, bool *block)
 			else
 			{
 				wchar_t mismatchMsg[256];
-				swprintf(mismatchMsg, L"[ItemMover] Item ID mismatch: received %d, expected %d", itemId, ActivePacket.itemId);
-				D2CLIENT_PrintGameString(mismatchMsg, 0);
 			}
 			if (isMovingItem)
 			{
@@ -1073,7 +1062,6 @@ void ItemMover::OnGamePacketRecv(BYTE *packet, bool *block)
 				}
 				else
 				{
-					D2CLIENT_PrintGameString(L"[ItemMover] Attempting to place in container", 0);
 
 					PutItemInContainer();
 				}
