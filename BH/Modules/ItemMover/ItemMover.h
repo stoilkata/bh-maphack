@@ -54,6 +54,7 @@ private:
 	unsigned int HealKey;
 	unsigned int ManaKey;
 	unsigned int JuvKey;
+	unsigned int MoveToStashKey;
 	ItemPacketData ActivePacket;
 	CRITICAL_SECTION crit;
 	Drawing::UITab *settingsTab;
@@ -133,5 +134,5 @@ bool ProcessStat(unsigned int statId, BitReader &reader, ItemProperty &itemProp)
 int GetMaxStackSize(char *code);
 bool IsSameStackableItem(char *code1, char *code2);
 int GetItemMaxStackSize(UnitAny *pItem);
-bool IsStackableGem(char* code);
-bool IsStackableRune(char* code);
+bool IsStackableGem(char *code);
+bool IsStackableRune(char *code);

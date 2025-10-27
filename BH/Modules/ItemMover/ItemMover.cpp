@@ -277,7 +277,7 @@ bool ItemMover::FindDestination(int destination, unsigned int itemId, BYTE xSize
 					{
 						int currentQuantity = D2COMMON_GetUnitStat(pItem, STAT_AMMOQUANTITY, 0);
 						if (currentQuantity <= 0)
-							currentQuantity = 1; 
+							currentQuantity = 1;
 
 						if (currentQuantity < maxStackSize)
 						{
@@ -294,7 +294,7 @@ bool ItemMover::FindDestination(int destination, unsigned int itemId, BYTE xSize
 								ActivePacket.y = destY;
 								ActivePacket.startTicks = BHGetTickCount();
 								ActivePacket.destination = destination;
-								ActivePacket.targetItemId = pItem->dwUnitId; 
+								ActivePacket.targetItemId = pItem->dwUnitId;
 							}
 							Unlock();
 
@@ -409,8 +409,8 @@ void ItemMover::PutItemInContainer()
 	if (ActivePacket.targetItemId > 0)
 	{
 		BYTE PacketData[9] = {0x21, 0, 0, 0, 0, 0, 0, 0, 0};
-		*reinterpret_cast<int *>(PacketData + 1) = ActivePacket.itemId;		  
-		*reinterpret_cast<int *>(PacketData + 5) = ActivePacket.targetItemId; 
+		*reinterpret_cast<int *>(PacketData + 1) = ActivePacket.itemId;
+		*reinterpret_cast<int *>(PacketData + 5) = ActivePacket.targetItemId;
 		D2NET_SendPacket(9, 1, PacketData);
 	}
 	else
@@ -554,6 +554,7 @@ void ItemMover::LoadConfig()
 	BH::config->ReadKey("Use Healing Potion", "VK_NUMPADMULTIPLY", HealKey);
 	BH::config->ReadKey("Use Mana Potion", "VK_NUMPADSUBTRACT", ManaKey);
 	BH::config->ReadKey("Use Rejuv Potion", "VK_NUMPADDIVIDE", JuvKey);
+	BH::config->ReadKey("Move to Stash", "VK_DELETE", MoveToStashKey);
 
 	BH::config->ReadInt("Low TP Warning", tp_warn_quantity);
 }
@@ -572,6 +573,7 @@ void ItemMover::OnLoad()
 	new Drawing::Keyhook(settingsTab, x, (y += 15), &HealKey, "Use Healing Potion:    ");
 	new Drawing::Keyhook(settingsTab, x, (y += 15), &ManaKey, "Use Mana Potion:       ");
 	new Drawing::Keyhook(settingsTab, x, (y += 15), &JuvKey, "Use Rejuv Potion:      ");
+	new Drawing::Keyhook(settingsTab, x, (y += 15), &MoveToStashKey, "Move Items to Stash:   ");
 
 	y += 7;
 
@@ -587,6 +589,9 @@ void ItemMover::OnLoad()
 	colored_text->SetColor(Gold);
 	colored_text = new Drawing::Texthook(settingsTab, x, (y += 15),
 										 "Ctrl-shift-rightclick moves item into closed cube");
+	colored_text->SetColor(Gold);
+	colored_text = new Drawing::Texthook(settingsTab, x, (y += 15),
+										 "Move to Stash key moves runes/gems/jewels and deposits gold");
 	colored_text->SetColor(Gold);
 
 	colored_text = new Drawing::Texthook(settingsTab, x, (y += 15),
@@ -675,19 +680,19 @@ int GetItemMaxStackSize(UnitAny *pItem)
 		BYTE runeNum = GetRuneNumber(code);
 		if (runeNum >= 1 && runeNum <= 15)
 		{
-			return 20; 
+			return 20;
 		}
 		else if (runeNum >= 16 && runeNum <= 33)
 		{
-			return 10; 
+			return 10;
 		}
 	}
 	else if (IsStackableGem(code))
 	{
-		return 50; 
+		return 50;
 	}
 
-	return 1; 
+	return 1;
 }
 
 int GetMaxStackSize(char *code)
@@ -697,18 +702,18 @@ int GetMaxStackSize(char *code)
 		BYTE runeNum = GetRuneNumber(code);
 		if (runeNum >= 1 && runeNum <= 15)
 		{
-			return 20; 
+			return 20;
 		}
 		else if (runeNum >= 16 && runeNum <= 33)
 		{
-			return 10; 
+			return 10;
 		}
 	}
 	else if (IsStackableGem(code))
 	{
-		return 50; 
+		return 50;
 	}
-	return 1; 
+	return 1;
 }
 
 bool IsSameStackableItem(char *code1, char *code2)
@@ -802,7 +807,7 @@ void ItemMover::OnKey(bool up, BYTE key, LPARAM lParam, bool *block)
 	if (!unit)
 		return;
 
-	if (!up && key == VK_DELETE)
+	if (!up && key == MoveToStashKey)
 	{
 		MoveRunesJewelsGemsToStash(block);
 	}
@@ -933,7 +938,6 @@ void ItemMover::OnGamePacketRecv(BYTE *packet, bool *block)
 				{
 					wchar_t cursorMsg[256];
 				}
-			
 
 				// PrintText(1, "Placed item id %d", itemId);
 				ActivePacket.itemId = 0;
