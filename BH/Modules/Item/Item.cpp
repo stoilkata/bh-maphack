@@ -52,9 +52,9 @@
 #include "../../MPQInit.h"
 #include "lrucache.hpp"
 
-ItemsTxtStat* GetAllStatModifier(ItemsTxtStat* pStats, int nStats, int nStat, ItemsTxtStat* pOrigin);
-ItemsTxtStat* GetItemsTxtStatByMod(ItemsTxtStat* pStats, int nStats, int nStat, int nStatParam);
-RunesTxt* GetRunewordTxtById(int rwId);
+ItemsTxtStat *GetAllStatModifier(ItemsTxtStat *pStats, int nStats, int nStat, ItemsTxtStat *pOrigin);
+ItemsTxtStat *GetItemsTxtStatByMod(ItemsTxtStat *pStats, int nStats, int nStat, int nStatParam);
+RunesTxt *GetRunewordTxtById(int rwId);
 
 map<std::string, Toggle> Item::Toggles;
 unordered_set<string> Item::no_ilvl_codes;
@@ -62,26 +62,27 @@ unsigned int Item::filterLevelSetting = 0;
 unsigned int Item::pingLevelSetting = 0;
 unsigned int Item::trackerPingLevelSetting = -1;
 int Item::statRangeColor = TextColor::DarkGreen;
-UnitAny* Item::viewingUnit;
+UnitAny *Item::viewingUnit;
 
-Patch* itemNamePatch = new Patch(Call, D2CLIENT, { 0x92366, 0x96736 }, (int)ItemName_Interception, 6);
-Patch* itemPropertiesPatch = new Patch(Jump, D2CLIENT, { 0x5612C, 0x2E3FC }, (int)GetProperties_Interception, 6);
-Patch* itemPropertyStringDamagePatch = new Patch(Call, D2CLIENT, { 0x55D7B, 0x2E04B }, (int)GetItemPropertyStringDamage_Interception, 5);
-Patch* itemPropertyStringPatch = new Patch(Call, D2CLIENT, { 0x55D9D, 0x2E06D }, (int) GetItemPropertyString_Interception, 5);
-Patch* viewInvPatch1 = new Patch(Call, D2CLIENT, { 0x953E2, 0x997B2 }, (int)ViewInventoryPatch1_ASM, 6);
-Patch* viewInvPatch2 = new Patch(Call, D2CLIENT, { 0x94AB4, 0x98E84 }, (int)ViewInventoryPatch2_ASM, 6);
-Patch* viewInvPatch3 = new Patch(Call, D2CLIENT, { 0x93A6F, 0x97E3F }, (int)ViewInventoryPatch3_ASM, 5);
+Patch *itemNamePatch = new Patch(Call, D2CLIENT, {0x92366, 0x96736}, (int)ItemName_Interception, 6);
+Patch *itemPropertiesPatch = new Patch(Jump, D2CLIENT, {0x5612C, 0x2E3FC}, (int)GetProperties_Interception, 6);
+Patch *itemPropertyStringDamagePatch = new Patch(Call, D2CLIENT, {0x55D7B, 0x2E04B}, (int)GetItemPropertyStringDamage_Interception, 5);
+Patch *itemPropertyStringPatch = new Patch(Call, D2CLIENT, {0x55D9D, 0x2E06D}, (int)GetItemPropertyString_Interception, 5);
+Patch *viewInvPatch1 = new Patch(Call, D2CLIENT, {0x953E2, 0x997B2}, (int)ViewInventoryPatch1_ASM, 6);
+Patch *viewInvPatch2 = new Patch(Call, D2CLIENT, {0x94AB4, 0x98E84}, (int)ViewInventoryPatch2_ASM, 6);
+Patch *viewInvPatch3 = new Patch(Call, D2CLIENT, {0x93A6F, 0x97E3F}, (int)ViewInventoryPatch3_ASM, 5);
 
-//ported to 1.13c/d from https://github.com/jieaido/d2hackmap/blob/master/PermShowItem.cpp
-Patch* permShowItems1 = new Patch(Call, D2CLIENT, { 0xC3D4E, 0x1D74E }, (int)PermShowItemsPatch1_ASM, 6);
-Patch* permShowItems2 = new Patch(Call, D2CLIENT, { 0xC0E9A, 0x1A89A }, (int)PermShowItemsPatch1_ASM, 6);
-Patch* permShowItems3 = new Patch(Call, D2CLIENT, { 0x59483, 0x4EA13 }, (int)PermShowItemsPatch2_ASM, 6);
-Patch* permShowItems4 = new Patch(Call, D2CLIENT, { 0x5908A, 0x4E61A }, (int)PermShowItemsPatch3_ASM, 6);
-Patch* permShowItems5 = new Patch(Call, D2CLIENT, { 0xA6BA3, 0x63443 }, (int)PermShowItemsPatch4_ASM, 6);
+// ported to 1.13c/d from https://github.com/jieaido/d2hackmap/blob/master/PermShowItem.cpp
+Patch *permShowItems1 = new Patch(Call, D2CLIENT, {0xC3D4E, 0x1D74E}, (int)PermShowItemsPatch1_ASM, 6);
+Patch *permShowItems2 = new Patch(Call, D2CLIENT, {0xC0E9A, 0x1A89A}, (int)PermShowItemsPatch1_ASM, 6);
+Patch *permShowItems3 = new Patch(Call, D2CLIENT, {0x59483, 0x4EA13}, (int)PermShowItemsPatch2_ASM, 6);
+Patch *permShowItems4 = new Patch(Call, D2CLIENT, {0x5908A, 0x4E61A}, (int)PermShowItemsPatch3_ASM, 6);
+Patch *permShowItems5 = new Patch(Call, D2CLIENT, {0xA6BA3, 0x63443}, (int)PermShowItemsPatch4_ASM, 6);
 
 using namespace Drawing;
 
-void Item::OnLoad() {
+void Item::OnLoad()
+{
 	LoadConfig();
 
 	viewInvPatch1->Install();
@@ -105,7 +106,8 @@ void Item::OnLoad() {
 	DrawSettings();
 }
 
-void ResetCaches() {
+void ResetCaches()
+{
 	item_desc_cache.ResetCache();
 	item_name_cache.ResetCache();
 	map_action_cache.ResetCache();
@@ -113,17 +115,20 @@ void ResetCaches() {
 	ignore_cache.ResetCache();
 }
 
-void Item::OnGameJoin() {
+void Item::OnGameJoin()
+{
 	// reset the item name cache upon joining games
 	// (GUIDs not unique across games)
 	ResetCaches();
 	OnLoop();
-	if (ItemDisplay::UntestedSettingsUsed()) {
+	if (ItemDisplay::UntestedSettingsUsed())
+	{
 		PrintText(10, "Warning - using experimental config settings");
 	}
 }
 
-void Item::LoadConfig() {
+void Item::LoadConfig()
+{
 	BH::config->ReadToggle("Show Ethereal", "None", true, Toggles["Show Ethereal"]);
 	BH::config->ReadToggle("Show Sockets", "None", true, Toggles["Show Sockets"]);
 	BH::config->ReadToggle("Show ILvl", "None", true, Toggles["Show iLvl"]);
@@ -140,6 +145,7 @@ void Item::LoadConfig() {
 	BH::config->ReadToggle("Allow Unknown Items", "None", false, Toggles["Allow Unknown Items"]);
 	BH::config->ReadToggle("Suppress Invalid Stats", "None", false, Toggles["Suppress Invalid Stats"]);
 	BH::config->ReadToggle("Always Show Item Stat Ranges", "None", true, Toggles["Always Show Item Stat Ranges"]);
+	BH::config->ReadToggle("Show Item Quantities", "None", true, Toggles["Show Item Quantities"]);
 	BH::config->ReadInt("Filter Level", filterLevelSetting);
 	BH::config->ReadInt("Ping Level", pingLevelSetting);
 	BH::config->ReadInt("Run Details Ping Level", trackerPingLevelSetting);
@@ -149,12 +155,13 @@ void Item::LoadConfig() {
 
 	ItemDisplay::UninitializeItemRules();
 
-	//InitializeMPQData();
+	// InitializeMPQData();
 
 	BH::config->ReadKey("Show Players Gear", "VK_0", showPlayer);
 }
 
-void Item::LoadNoIlvlCodes() {
+void Item::LoadNoIlvlCodes()
+{
 	// this method does not support saving back to the file
 	vector<pair<string, string>> no_ilvls;
 
@@ -163,25 +170,31 @@ void Item::LoadNoIlvlCodes() {
 	no_ilvl_codes.clear();
 
 	string buf;
-	for (auto & entry: no_ilvls) {
+	for (auto &entry : no_ilvls)
+	{
 		stringstream ss(entry.second);
-		while (ss >> buf) {
+		while (ss >> buf)
+		{
 			no_ilvl_codes.insert(buf);
 		}
 	}
 }
 
-void Item::ResetPatches() {
-	//todo figure out a way to not have to install/remove the patches onloop
-	//we only remove it because one of them will break being able to not
-	//target monsters with your normal show items key.
-	if (Toggles["Always Show Items"].state) {
+void Item::ResetPatches()
+{
+	// todo figure out a way to not have to install/remove the patches onloop
+	// we only remove it because one of them will break being able to not
+	// target monsters with your normal show items key.
+	if (Toggles["Always Show Items"].state)
+	{
 		permShowItems1->Install();
 		permShowItems2->Install();
 		permShowItems3->Install();
 		permShowItems4->Install();
 		permShowItems5->Install();
-	} else {
+	}
+	else
+	{
 		permShowItems1->Remove();
 		permShowItems2->Remove();
 		permShowItems3->Remove();
@@ -190,37 +203,38 @@ void Item::ResetPatches() {
 	}
 }
 
-void Item::DrawSettings() {
+void Item::DrawSettings()
+{
 	settingsTab = new UITab("Item", BH::settingsUI);
 	int y = 10;
 	int keyhook_x = 230;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Show Ethereal"].state, "Show Ethereal");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Show Ethereal"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Show Ethereal"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Show Sockets"].state, "Show Sockets");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Show Sockets"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Show Sockets"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Show iLvl"].state, "Show iLvl");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Show iLvl"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Show iLvl"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Show Rune Numbers"].state, "Show Rune #");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Show Rune Numbers"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Show Rune Numbers"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Alt Item Style"].state, "Alt Style");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Alt Item Style"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Alt Item Style"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Color Mod"].state, "Color Mod");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Color Mod"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Color Mod"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Shorten Item Names"].state, "Shorten Names");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Shorten Item Names"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Shorten Item Names"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Always Show Items"].state, "Always Show Items");
@@ -228,19 +242,19 @@ void Item::DrawSettings() {
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Always Show Item Stat Ranges"].state, "Always Show Item Stat Ranges");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Always Show Item Stat Ranges"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Always Show Item Stat Ranges"].toggle, "");
 	y += 15;
-	
+
 	new Checkhook(settingsTab, 4, y, &Toggles["Advanced Item Display"].state, "Advanced Item Display");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Advanced Item Display"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Advanced Item Display"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Item Drop Notifications"].state, "Item Drop Notifications");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Item Drop Notifications"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Item Drop Notifications"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Item Close Notifications"].state, "Item Close Notifications");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Item Close Notifications"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Item Close Notifications"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Item Detailed Notifications"].state, "Item Detailed Notifications");
@@ -248,14 +262,17 @@ void Item::DrawSettings() {
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Verbose Notifications"].state, "Verbose Notifications");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Verbose Notifications"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Verbose Notifications"].toggle, "");
 	y += 15;
 
 	new Checkhook(settingsTab, 4, y, &Toggles["Suppress Invalid Stats"].state, "Suppress Invalid Stats");
-	new Keyhook(settingsTab, keyhook_x, y+2, &Toggles["Suppress Invalid Stats"].toggle, "");
+	new Keyhook(settingsTab, keyhook_x, y + 2, &Toggles["Suppress Invalid Stats"].toggle, "");
 	y += 15;
-	
-	new Keyhook(settingsTab, 4, y+2, &showPlayer, "Show Player's Gear:   ");
+
+	new Checkhook(settingsTab, 4, y, &Toggles["Show Item Quantities"].state, "Show Item Quantities");
+	y += 15;
+
+	new Keyhook(settingsTab, 4, y + 2, &showPlayer, "Show Player's Gear:   ");
 	y += 15;
 
 	new Texthook(settingsTab, 4, y, "Filter Level:");
@@ -280,7 +297,8 @@ void Item::DrawSettings() {
 	new Combohook(settingsTab, 330, y, 40, &pingLevelSetting, ping_options);
 }
 
-void Item::OnUnload() {
+void Item::OnUnload()
+{
 	itemNamePatch->Remove();
 	itemPropertiesPatch->Remove();
 	itemPropertyStringDamagePatch->Remove();
@@ -296,58 +314,72 @@ void Item::OnUnload() {
 	ItemDisplay::UninitializeItemRules();
 }
 
-void Item::OnLoop() {
+void Item::OnLoop()
+{
 	ResetPatches();
 	static unsigned int localFilterLevel = 0;
 	static unsigned int localPingLevel = 0;
 	// This is a bit of a hack to reset the cache when the user changes the item filter level
-	if (localFilterLevel != filterLevelSetting) {
+	if (localFilterLevel != filterLevelSetting)
+	{
 		ResetCaches();
 		localFilterLevel = filterLevelSetting;
 	}
-	if (localPingLevel != pingLevelSetting) {
+	if (localPingLevel != pingLevelSetting)
+	{
 		ResetCaches();
 		localPingLevel = pingLevelSetting;
 	}
 	if (!D2CLIENT_GetUIState(0x01))
 		viewingUnit = NULL;
-	
-	if (Toggles["Advanced Item Display"].state) {
+
+	if (Toggles["Advanced Item Display"].state)
+	{
 		ItemDisplay::InitializeItemRules();
 	}
 
-	if (viewingUnit && viewingUnit->dwUnitId) {
-		if (!viewingUnit->pInventory){
+	if (viewingUnit && viewingUnit->dwUnitId)
+	{
+		if (!viewingUnit->pInventory)
+		{
 			viewingUnit = NULL;
-			D2CLIENT_SetUIVar(0x01, 1, 0);			
-		} else if (!D2CLIENT_FindServerSideUnit(viewingUnit->dwUnitId, viewingUnit->dwType)) {
+			D2CLIENT_SetUIVar(0x01, 1, 0);
+		}
+		else if (!D2CLIENT_FindServerSideUnit(viewingUnit->dwUnitId, viewingUnit->dwType))
+		{
 			viewingUnit = NULL;
 			D2CLIENT_SetUIVar(0x01, 1, 0);
 		}
 	}
 }
 
-void Item::OnKey(bool up, BYTE key, LPARAM lParam, bool* block) {
-	if (key == showPlayer) {
+void Item::OnKey(bool up, BYTE key, LPARAM lParam, bool *block)
+{
+	if (key == showPlayer)
+	{
 		*block = true;
 		if (up)
 			return;
-		UnitAny* selectedUnit = D2CLIENT_GetSelectedUnit();
-		if (selectedUnit && selectedUnit->dwMode != 0 && selectedUnit->dwMode != 17 && ( // Alive
-					selectedUnit->dwType == 0 ||					// Player
-					selectedUnit->dwTxtFileNo == 291 ||		// Iron Golem
-					selectedUnit->dwTxtFileNo == 357 ||		// Valkerie
-					selectedUnit->dwTxtFileNo == 418)) {	// Shadow Master
+		UnitAny *selectedUnit = D2CLIENT_GetSelectedUnit();
+		if (selectedUnit && selectedUnit->dwMode != 0 && selectedUnit->dwMode != 17 && (									   // Alive
+																						   selectedUnit->dwType == 0 ||		   // Player
+																						   selectedUnit->dwTxtFileNo == 291 || // Iron Golem
+																						   selectedUnit->dwTxtFileNo == 357 || // Valkerie
+																						   selectedUnit->dwTxtFileNo == 418))
+		{ // Shadow Master
 			viewingUnit = selectedUnit;
 			if (!D2CLIENT_GetUIState(0x01))
 				D2CLIENT_SetUIVar(0x01, 0, 0);
 			return;
 		}
 	}
-	for (map<string,Toggle>::iterator it = Toggles.begin(); it != Toggles.end(); it++) {
-		if (key == (*it).second.toggle) {
+	for (map<string, Toggle>::iterator it = Toggles.begin(); it != Toggles.end(); it++)
+	{
+		if (key == (*it).second.toggle)
+		{
 			*block = true;
-			if (up) {
+			if (up)
+			{
 				(*it).second.state = !(*it).second.state;
 			}
 			return;
@@ -355,39 +387,53 @@ void Item::OnKey(bool up, BYTE key, LPARAM lParam, bool* block) {
 	}
 }
 
-void Item::OnLeftClick(bool up, unsigned int x, unsigned int y, bool* block) {
+void Item::OnLeftClick(bool up, unsigned int x, unsigned int y, bool *block)
+{
 	if (up)
 		return;
 	if (D2CLIENT_GetUIState(0x01) && viewingUnit != NULL && x >= 400)
 		*block = true;
 }
 
-int CreateUnitItemInfo(UnitItemInfo *uInfo, UnitAny *item) {
-	char* code = D2COMMON_GetItemText(item->dwTxtFileNo)->szCode;
-	uInfo->itemCode[0] = code[0]; uInfo->itemCode[1] = code[1]; uInfo->itemCode[2] = code[2]; uInfo->itemCode[3] = 0;
+int CreateUnitItemInfo(UnitItemInfo *uInfo, UnitAny *item)
+{
+	char *code = D2COMMON_GetItemText(item->dwTxtFileNo)->szCode;
+	uInfo->itemCode[0] = code[0];
+	uInfo->itemCode[1] = code[1];
+	uInfo->itemCode[2] = code[2];
+	uInfo->itemCode[3] = 0;
 	uInfo->item = item;
-	if (ItemAttributeMap.find(uInfo->itemCode) != ItemAttributeMap.end()) {
+	if (ItemAttributeMap.find(uInfo->itemCode) != ItemAttributeMap.end())
+	{
 		uInfo->attrs = ItemAttributeMap[uInfo->itemCode];
 		return 0;
-	} else {
+	}
+	else
+	{
 		return -1;
 	}
 }
 
 void __fastcall Item::ItemNamePatch(wchar_t *name, UnitAny *item)
 {
-	char* szName = UnicodeToAnsi(name);
+	char *szName = UnicodeToAnsi(name);
 	string itemName = szName;
-	char* code = D2COMMON_GetItemText(item->dwTxtFileNo)->szCode;
+	char *code = D2COMMON_GetItemText(item->dwTxtFileNo)->szCode;
 
-	if (Toggles["Advanced Item Display"].state) {
+	if (Toggles["Advanced Item Display"].state)
+	{
 		UnitItemInfo uInfo;
-		if (!CreateUnitItemInfo(&uInfo, item)) {
+		if (!CreateUnitItemInfo(&uInfo, item))
+		{
 			GetItemName(&uInfo, itemName);
-		} else {
+		}
+		else
+		{
 			HandleUnknownItemCode(uInfo.itemCode, "name");
 		}
-	} else {
+	}
+	else
+	{
 		OrigGetItemName(item, itemName, code);
 	}
 
@@ -405,11 +451,11 @@ void __fastcall Item::ItemNamePatch(wchar_t *name, UnitAny *item)
 	// \xFF" "c9 (yellow)
 
 	/* Test code to display item codes */
-	//string test3 = test_code;
-	//itemName += " {" + test3 + "}";
+	// string test3 = test_code;
+	// itemName += " {" + test3 + "}";
 
 	MultiByteToWideChar(CODE_PAGE, MB_PRECOMPOSED, itemName.c_str(), itemName.length(), name, itemName.length());
-	name[itemName.length()] = 0;  // null-terminate the string since MultiByteToWideChar doesn't
+	name[itemName.length()] = 0; // null-terminate the string since MultiByteToWideChar doesn't
 	delete[] szName;
 }
 
@@ -419,170 +465,198 @@ void Item::OrigGetItemName(UnitAny *item, string &itemName, char *code)
 	if (Toggles["Shorten Item Names"].state)
 	{
 		// We will also strip ilvls from these items
-		if (code[0] == 't' && code[1] == 's' && code[2] == 'c')  // town portal scroll
+		if (code[0] == 't' && code[1] == 's' && code[2] == 'c') // town portal scroll
 		{
-			itemName = "\xFF" "c2**\xFF" "c0TP";
+			itemName = "\xFF"
+					   "c2**\xFF"
+					   "c0TP";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'i' && code[1] == 's' && code[2] == 'c')  // identify scroll
+		else if (code[0] == 'i' && code[1] == 's' && code[2] == 'c') // identify scroll
 		{
-			itemName = "\xFF" "c2**\xFF" "c0ID";
+			itemName = "\xFF"
+					   "c2**\xFF"
+					   "c0ID";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'v' && code[1] == 'p' && code[2] == 's')  // stamina potion
+		else if (code[0] == 'v' && code[1] == 'p' && code[2] == 's') // stamina potion
 		{
 			itemName = "Stam";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'y' && code[1] == 'p' && code[2] == 's')  // antidote potion
+		else if (code[0] == 'y' && code[1] == 'p' && code[2] == 's') // antidote potion
 		{
 			itemName = "Anti";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'w' && code[1] == 'm' && code[2] == 's')  // thawing potion
+		else if (code[0] == 'w' && code[1] == 'm' && code[2] == 's') // thawing potion
 		{
 			itemName = "Thaw";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'g' && code[1] == 'p' && code[2] == 's')  // rancid gas potion
+		else if (code[0] == 'g' && code[1] == 'p' && code[2] == 's') // rancid gas potion
 		{
 			itemName = "Ranc";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'o' && code[1] == 'p' && code[2] == 's')  // oil potion
+		else if (code[0] == 'o' && code[1] == 'p' && code[2] == 's') // oil potion
 		{
 			itemName = "Oil";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'g' && code[1] == 'p' && code[2] == 'm')  // choking gas potion
+		else if (code[0] == 'g' && code[1] == 'p' && code[2] == 'm') // choking gas potion
 		{
 			itemName = "Chok";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'o' && code[1] == 'p' && code[2] == 'm')  // exploding potion
+		else if (code[0] == 'o' && code[1] == 'p' && code[2] == 'm') // exploding potion
 		{
 			itemName = "Expl";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'g' && code[1] == 'p' && code[2] == 'l')  // strangling gas potion
+		else if (code[0] == 'g' && code[1] == 'p' && code[2] == 'l') // strangling gas potion
 		{
 			itemName = "Stra";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'o' && code[1] == 'p' && code[2] == 'l')  // fulminating potion
+		else if (code[0] == 'o' && code[1] == 'p' && code[2] == 'l') // fulminating potion
 		{
 			itemName = "Fulm";
 			displayItemLevel = false;
 		}
-		else if (code[0] == 'h' && code[1] == 'p')  // healing potions
+		else if (code[0] == 'h' && code[1] == 'p') // healing potions
 		{
 			if (code[2] == '1')
 			{
-				itemName = "\xFF" "c1**\xFF" "c0Min Heal";
+				itemName = "\xFF"
+						   "c1**\xFF"
+						   "c0Min Heal";
 				displayItemLevel = false;
 			}
 			else if (code[2] == '2')
 			{
-				itemName = "\xFF" "c1**\xFF" "c0Lt Heal";
+				itemName = "\xFF"
+						   "c1**\xFF"
+						   "c0Lt Heal";
 				displayItemLevel = false;
 			}
 			else if (code[2] == '3')
 			{
-				itemName = "\xFF" "c1**\xFF" "c0Heal";
+				itemName = "\xFF"
+						   "c1**\xFF"
+						   "c0Heal";
 				displayItemLevel = false;
 			}
 			else if (code[2] == '4')
 			{
-				itemName = "\xFF" "c1**\xFF" "c0Gt Heal";
+				itemName = "\xFF"
+						   "c1**\xFF"
+						   "c0Gt Heal";
 				displayItemLevel = false;
 			}
 			else if (code[2] == '5')
 			{
-				itemName = "\xFF" "c1**\xFF" "c0Sup Heal";
+				itemName = "\xFF"
+						   "c1**\xFF"
+						   "c0Sup Heal";
 				displayItemLevel = false;
 			}
 		}
-		else if (code[0] == 'm' && code[1] == 'p')  // mana potions
+		else if (code[0] == 'm' && code[1] == 'p') // mana potions
 		{
 			if (code[2] == '1')
 			{
-				itemName = "\xFF" "c3**\xFF" "c0Min Mana";
+				itemName = "\xFF"
+						   "c3**\xFF"
+						   "c0Min Mana";
 				displayItemLevel = false;
 			}
 			else if (code[2] == '2')
 			{
-				itemName = "\xFF" "c3**\xFF" "c0Lt Mana";
+				itemName = "\xFF"
+						   "c3**\xFF"
+						   "c0Lt Mana";
 				displayItemLevel = false;
 			}
 			else if (code[2] == '3')
 			{
-				itemName = "\xFF" "c3**\xFF" "c0Mana";
+				itemName = "\xFF"
+						   "c3**\xFF"
+						   "c0Mana";
 				displayItemLevel = false;
 			}
 			else if (code[2] == '4')
 			{
-				itemName = "\xFF" "c3**\xFF" "c0Gt Mana";
+				itemName = "\xFF"
+						   "c3**\xFF"
+						   "c0Gt Mana";
 				displayItemLevel = false;
 			}
 			else if (code[2] == '5')
 			{
-				itemName = "\xFF" "c3**\xFF" "c0Sup Mana";
+				itemName = "\xFF"
+						   "c3**\xFF"
+						   "c0Sup Mana";
 				displayItemLevel = false;
 			}
 		}
-		else if (code[0] == 'r' && code[1] == 'v')  // rejuv potions
+		else if (code[0] == 'r' && code[1] == 'v') // rejuv potions
 		{
 			if (code[2] == 's')
 			{
-				itemName = "\xFF" "c;**\xFF" "c0Rejuv";
+				itemName = "\xFF"
+						   "c;**\xFF"
+						   "c0Rejuv";
 				displayItemLevel = false;
 			}
 			else if (code[2] == 'l')
 			{
-				itemName = "\xFF" "c;**\xFF" "c0Full";
+				itemName = "\xFF"
+						   "c;**\xFF"
+						   "c0Full";
 				displayItemLevel = false;
 			}
 		}
 		else if (code[1] == 'q' && code[2] == 'v')
 		{
-			if (code[0] == 'a')  // arrows
+			if (code[0] == 'a') // arrows
 			{
 				displayItemLevel = false;
 			}
-			else if (code[0] == 'c')  // bolts
+			else if (code[0] == 'c') // bolts
 			{
 				displayItemLevel = false;
 			}
 		}
-		else if (code[0] == 'k' && code[1] == 'e' && code[2] == 'y')  // key
+		else if (code[0] == 'k' && code[1] == 'e' && code[2] == 'y') // key
 		{
 			displayItemLevel = false;
 		}
 	}
 
 	/*Suffix Color Mod*/
-	if( Toggles["Color Mod"].state )
+	if (Toggles["Color Mod"].state)
 	{
 		/*Essences*/
-		if( code[0] == 't' && code[1] == 'e' && code[2] == 's' )
+		if (code[0] == 't' && code[1] == 'e' && code[2] == 's')
 		{
 			itemName = itemName + " (Andariel/Duriel)";
 		}
-		if( code[0] == 'c' && code[1] == 'e' && code[2] == 'h' )
+		if (code[0] == 'c' && code[1] == 'e' && code[2] == 'h')
 		{
 			itemName = itemName + " (Mephtisto)";
 		}
-		if( code[0] == 'b' && code[1] == 'e' && code[2] == 't' )
+		if (code[0] == 'b' && code[1] == 'e' && code[2] == 't')
 		{
 			itemName = itemName + " (Diablo)";
 		}
-		if( code[0] == 'f' && code[1] == 'e' && code[2] == 'd' )
+		if (code[0] == 'f' && code[1] == 'e' && code[2] == 'd')
 		{
 			itemName = itemName + " (Baal)";
 		}
 	}
 
-	if( Toggles["Alt Item Style"].state )
+	if (Toggles["Alt Item Style"].state)
 	{
 		if (Toggles["Show Rune Numbers"].state && D2COMMON_GetItemText(item->dwTxtFileNo)->nType == 74)
 		{
@@ -603,7 +677,7 @@ void Item::OrigGetItemName(UnitAny *item, string &itemName, char *code)
 			{
 				itemName = "Eth " + itemName;
 			}
-	
+
 			/*show iLvl unless it is equal to 1*/
 			if (displayItemLevel && item->pItemData->dwItemLevel != 1)
 			{
@@ -613,7 +687,8 @@ void Item::OrigGetItemName(UnitAny *item, string &itemName, char *code)
 	}
 	else
 	{
-		if (Toggles["Show Sockets"].state) {
+		if (Toggles["Show Sockets"].state)
+		{
 			int sockets = D2COMMON_GetUnitStat(item, STAT_SOCKETS, 0);
 			if (sockets > 0)
 				itemName += "(" + to_string(sockets) + ")";
@@ -629,124 +704,150 @@ void Item::OrigGetItemName(UnitAny *item, string &itemName, char *code)
 	}
 
 	/*Affix (Colors) Color Mod*/
-	if( Toggles["Color Mod"].state )
+	if (Toggles["Color Mod"].state)
 	{
 		///*Flawless Gems*/
-		//if( (code[0] == 'g' && code[1] == 'l'					) ||
+		// if( (code[0] == 'g' && code[1] == 'l'					) ||
 		//	(code[0] == 's' && code[1] == 'k' && code[2] == 'l' ) )
 		//{
 		//	itemName = "\xFF" "c:" + itemName;
-		//}
+		// }
 		///*Perfect Gems*/
-		//if( (code[0] == 'g' && code[1] == 'p'                   ) ||
+		// if( (code[0] == 'g' && code[1] == 'p'                   ) ||
 		//	(code[0] == 's' && code[1] == 'k' && code[2] == 'p' ) )
 		//{
 		//	itemName = "\xFF" "c<" + itemName;
-		//}
+		// }
 		/*Ethereal*/
-		if( item->pItemData->dwFlags & 0x400000 )
+		if (item->pItemData->dwFlags & 0x400000)
 		{
 			/*Turn ethereal elite armors (and paladin shields) purple*/
-			if( (code[0] == 'u'                                    ) ||
-				(code[0] == 'p' && code[1] == 'a' && code[2] >= 'b') )
+			if ((code[0] == 'u') ||
+				(code[0] == 'p' && code[1] == 'a' && code[2] >= 'b'))
 			{
-				itemName = "\xFF" "c;" + itemName;
+				itemName = "\xFF"
+						   "c;" +
+						   itemName;
 			}
 		}
 		/*Runes*/
-		if( code[0] == 'r' )
+		if (code[0] == 'r')
 		{
-			if( code[1] == '0' )
+			if (code[1] == '0')
 			{
-				itemName = "\xFF" "c0" + itemName;
+				itemName = "\xFF"
+						   "c0" +
+						   itemName;
 			}
-			else if( code[1] == '1' )
+			else if (code[1] == '1')
 			{
-				if( code[2] <= '6')
+				if (code[2] <= '6')
 				{
-					itemName = "\xFF" "c4" + itemName;
+					itemName = "\xFF"
+							   "c4" +
+							   itemName;
 				}
 				else
 				{
-					itemName = "\xFF" "c8" + itemName;
+					itemName = "\xFF"
+							   "c8" +
+							   itemName;
 				}
 			}
-			else if( code[1] == '2' )
+			else if (code[1] == '2')
 			{
-				if( code[2] <= '2' )
+				if (code[2] <= '2')
 				{
-					itemName = "\xFF" "c8" + itemName;
+					itemName = "\xFF"
+							   "c8" +
+							   itemName;
 				}
 				else
 				{
-					itemName = "\xFF" "c1" + itemName;
+					itemName = "\xFF"
+							   "c1" +
+							   itemName;
 				}
 			}
-			else if( code[1] == '3' )
+			else if (code[1] == '3')
 			{
-				itemName = "\xFF" "c1" + itemName;
+				itemName = "\xFF"
+						   "c1" +
+						   itemName;
 			}
 		}
 	}
 }
 
-static ItemsTxt* GetArmorText(UnitAny* pItem) {
-	ItemText* itemTxt = D2COMMON_GetItemText(pItem->dwTxtFileNo);
+static ItemsTxt *GetArmorText(UnitAny *pItem)
+{
+	ItemText *itemTxt = D2COMMON_GetItemText(pItem->dwTxtFileNo);
 	int armorTxtRecords = *p_D2COMMON_ArmorTxtRecords;
-	for (int i = 0; i < armorTxtRecords; i++) {
-		ItemsTxt* armorTxt = &(*p_D2COMMON_ArmorTxt)[i];
-		if (strcmp(armorTxt->szcode, itemTxt->szCode) == 0) {
+	for (int i = 0; i < armorTxtRecords; i++)
+	{
+		ItemsTxt *armorTxt = &(*p_D2COMMON_ArmorTxt)[i];
+		if (strcmp(armorTxt->szcode, itemTxt->szCode) == 0)
+		{
 			return armorTxt;
 		}
 	}
 	return NULL;
 }
 
-void __stdcall Item::OnProperties(wchar_t * wTxt)
+void __stdcall Item::OnProperties(wchar_t *wTxt)
 {
 	const int MAXLEN = 1024;
-	static wchar_t wDesc[128];// a buffer for converting the description
-	UnitAny* pItem = *p_D2CLIENT_SelectedInvItem;
+	static wchar_t wDesc[128]; // a buffer for converting the description
+	UnitAny *pItem = *p_D2CLIENT_SelectedInvItem;
 	UnitItemInfo uInfo;
-	if (!pItem || pItem->dwType != UNIT_ITEM || CreateUnitItemInfo(&uInfo, pItem)) {
+	if (!pItem || pItem->dwType != UNIT_ITEM || CreateUnitItemInfo(&uInfo, pItem))
+	{
 		return; // unknown item code
 	}
 
 	// Add description
-	if (Toggles["Advanced Item Display"].state) {
+	if (Toggles["Advanced Item Display"].state)
+	{
 		int aLen = wcslen(wTxt);
 		string desc = item_desc_cache.Get(&uInfo);
-		if (desc != "") {
+		if (desc != "")
+		{
 			auto chars_written = MultiByteToWideChar(CODE_PAGE, MB_PRECOMPOSED, desc.c_str(), -1, wDesc, 128);
 			swprintf_s(wTxt + aLen, MAXLEN - aLen,
-				L"%s%s\n",
-				(chars_written > 0) ? wDesc : L"\377c1 Descirption string too long!",
-				GetColorCode(TextColor::White).c_str());
+					   L"%s%s\n",
+					   (chars_written > 0) ? wDesc : L"\377c1 Descirption string too long!",
+					   GetColorCode(TextColor::White).c_str());
 		}
 	}
 
 	if (!(Toggles["Always Show Item Stat Ranges"].state ||
-				GetKeyState(VK_CONTROL) & 0x8000) ||
-			pItem == nullptr ||
-			pItem->dwType != UNIT_ITEM) { /* skip armor range */ }
-	else if (D2COMMON_IsMatchingType(pItem, ITEM_TYPE_ALLARMOR)) {
-		//Any Armor ItemTypes.txt
+		  GetKeyState(VK_CONTROL) & 0x8000) ||
+		pItem == nullptr ||
+		pItem->dwType != UNIT_ITEM)
+	{ /* skip armor range */
+	}
+	else if (D2COMMON_IsMatchingType(pItem, ITEM_TYPE_ALLARMOR))
+	{
+		// Any Armor ItemTypes.txt
 		int aLen = 0;
 		bool ebugged = false;
 		bool spawned_with_ed = false;
 		aLen = wcslen(wTxt);
-		ItemsTxt* armorTxt = GetArmorText(pItem);
+		ItemsTxt *armorTxt = GetArmorText(pItem);
 		DWORD base = D2COMMON_GetBaseStatSigned(pItem, STAT_DEFENSE, 0); // includes eth bonus if applicable
-		DWORD min = armorTxt->dwminac; // min of non-eth base
-		DWORD max_no_ed = armorTxt->dwmaxac; // max of non-eth base
+		DWORD min = armorTxt->dwminac;									 // min of non-eth base
+		DWORD max_no_ed = armorTxt->dwmaxac;							 // max of non-eth base
 		bool is_eth = pItem->pItemData->dwFlags & ITEM_ETHEREAL;
-		if (((base == max_no_ed + 1) && !is_eth) || ((base == 3*(max_no_ed+1)/2) && is_eth)) { // means item spawned with ED
+		if (((base == max_no_ed + 1) && !is_eth) || ((base == 3 * (max_no_ed + 1) / 2) && is_eth))
+		{ // means item spawned with ED
 			spawned_with_ed = true;
 		}
-		if (is_eth) {
+		if (is_eth)
+		{
 			min = (DWORD)(min * 1.50);
 			max_no_ed = (DWORD)(max_no_ed * 1.50);
-			if (base > max_no_ed && !spawned_with_ed) { // must be ebugged
+			if (base > max_no_ed && !spawned_with_ed)
+			{ // must be ebugged
 				min = (DWORD)(min * 1.50);
 				max_no_ed = (DWORD)(max_no_ed * 1.50);
 				ebugged = true;
@@ -755,16 +856,16 @@ void __stdcall Item::OnProperties(wchar_t * wTxt)
 
 		// Items with enhanced def mod will spawn with base def as max +1.
 		// Don't show range if item spawned with edef and hasn't been upgraded.
-		if (!spawned_with_ed) {
+		if (!spawned_with_ed)
+		{
 			swprintf_s(wTxt + aLen, MAXLEN - aLen,
-					L"%sBase Defense: %d %s[%d - %d]%s%s\n",
-					GetColorCode(TextColor::White).c_str(),
-					base,
-					GetColorCode(statRangeColor).c_str(),
-					min, max_no_ed,
-					ebugged ? L"\377c5 Ebug" : L"",
-					GetColorCode(TextColor::White).c_str()
-					);
+					   L"%sBase Defense: %d %s[%d - %d]%s%s\n",
+					   GetColorCode(TextColor::White).c_str(),
+					   base,
+					   GetColorCode(statRangeColor).c_str(),
+					   min, max_no_ed,
+					   ebugged ? L"\377c5 Ebug" : L"",
+					   GetColorCode(TextColor::White).c_str());
 		}
 	}
 
@@ -772,94 +873,107 @@ void __stdcall Item::OnProperties(wchar_t * wTxt)
 	int alvl = GetAffixLevel(ilvl, (BYTE)uInfo.attrs->qualityLevel, uInfo.attrs->magicLevel);
 	int quality = pItem->pItemData->dwQuality;
 	// Add alvl
-	if (Toggles["Advanced Item Display"].state && Toggles["Show iLvl"].state
-			&& ilvl != alvl 
-			&& (quality == ITEM_QUALITY_MAGIC || quality == ITEM_QUALITY_RARE || quality == ITEM_QUALITY_CRAFT)) {
+	if (Toggles["Advanced Item Display"].state && Toggles["Show iLvl"].state && ilvl != alvl && (quality == ITEM_QUALITY_MAGIC || quality == ITEM_QUALITY_RARE || quality == ITEM_QUALITY_CRAFT))
+	{
 		int aLen = wcslen(wTxt);
 		swprintf_s(wTxt + aLen, MAXLEN - aLen,
-				L"%sAffix Level: %d\n",
-				GetColorCode(TextColor::White).c_str(),
-				alvl);
+				   L"%sAffix Level: %d\n",
+				   GetColorCode(TextColor::White).c_str(),
+				   alvl);
 	}
 
 	// Add ilvl
 	if (Toggles["Advanced Item Display"].state &&
-			Toggles["Show iLvl"].state &&
-			ilvl > 1 &&
-			no_ilvl_codes.count(uInfo.itemCode) == 0)
+		Toggles["Show iLvl"].state &&
+		ilvl > 1 &&
+		no_ilvl_codes.count(uInfo.itemCode) == 0)
 	{
 		int aLen = wcslen(wTxt);
 		swprintf_s(wTxt + aLen, MAXLEN - aLen,
-				L"%sItem Level: %d\n",
-				GetColorCode(TextColor::White).c_str(),
-				ilvl);
+				   L"%sItem Level: %d\n",
+				   GetColorCode(TextColor::White).c_str(),
+				   ilvl);
 	}
 }
 
-BOOL __stdcall Item::OnDamagePropertyBuild(UnitAny* pItem, DamageStats* pDmgStats, int nStat, wchar_t* wOut) {
+BOOL __stdcall Item::OnDamagePropertyBuild(UnitAny *pItem, DamageStats *pDmgStats, int nStat, wchar_t *wOut)
+{
 	wchar_t newDesc[128];
 
 	// Ignore a max stat, use just a min dmg prop to gen the property string
-	if (nStat == STAT_MAXIMUMFIREDAMAGE || nStat == STAT_MAXIMUMCOLDDAMAGE || nStat == STAT_MAXIMUMLIGHTNINGDAMAGE|| nStat == STAT_MAXIMUMMAGICALDAMAGE ||
+	if (nStat == STAT_MAXIMUMFIREDAMAGE || nStat == STAT_MAXIMUMCOLDDAMAGE || nStat == STAT_MAXIMUMLIGHTNINGDAMAGE || nStat == STAT_MAXIMUMMAGICALDAMAGE ||
 		nStat == STAT_MAXIMUMPOISONDAMAGE || nStat == STAT_POISONDAMAGELENGTH || nStat == STAT_ENHANCEDMAXIMUMDAMAGE)
 		return TRUE;
 
 	int stat_min, stat_max;
-	wchar_t* szProp = nullptr;
+	wchar_t *szProp = nullptr;
 	bool ranged = true;
-	if (nStat == STAT_MINIMUMFIREDAMAGE) {
+	if (nStat == STAT_MINIMUMFIREDAMAGE)
+	{
 		if (pDmgStats->nFireDmgRange == 0)
 			return FALSE;
 		stat_min = pDmgStats->nMinFireDmg;
 		stat_max = pDmgStats->nMaxFireDmg;
-		if (stat_min >= stat_max) {
+		if (stat_min >= stat_max)
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODFIREDAMAGE);
 			ranged = false;
 		}
-		else {
+		else
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODFIREDAMAGERANGE);
 		}
 	}
-	else if (nStat == STAT_MINIMUMCOLDDAMAGE) {
+	else if (nStat == STAT_MINIMUMCOLDDAMAGE)
+	{
 		if (pDmgStats->nColdDmgRange == 0)
 			return FALSE;
 		stat_min = pDmgStats->nMinColdDmg;
 		stat_max = pDmgStats->nMaxColdDmg;
-		if (stat_min >= stat_max) {
+		if (stat_min >= stat_max)
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODCOLDDAMAGE);
 			ranged = false;
 		}
-		else {
+		else
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODCOLDDAMAGERANGE);
 		}
 	}
-	else if (nStat == STAT_MINIMUMLIGHTNINGDAMAGE) {
+	else if (nStat == STAT_MINIMUMLIGHTNINGDAMAGE)
+	{
 		if (pDmgStats->nLightDmgRange == 0)
 			return FALSE;
 		stat_min = pDmgStats->nMinLightDmg;
 		stat_max = pDmgStats->nMaxLightDmg;
-		if (stat_min >= stat_max) {
+		if (stat_min >= stat_max)
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODLIGHTNINGDAMAGE);
 			ranged = false;
 		}
-		else {
+		else
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODLIGHTNINGDAMAGERANGE);
 		}
 	}
-	else if (nStat == STAT_MINIMUMMAGICALDAMAGE) {
+	else if (nStat == STAT_MINIMUMMAGICALDAMAGE)
+	{
 		if (pDmgStats->nMagicDmgRange == 0)
 			return FALSE;
 		stat_min = pDmgStats->nMinMagicDmg;
 		stat_max = pDmgStats->nMaxMagicDmg;
-		if (stat_min >= stat_max) {
+		if (stat_min >= stat_max)
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODMAGICDAMAGE);
 			ranged = false;
 		}
-		else {
+		else
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODMAGICDAMAGERANGE);
 		}
 	}
-	else if (nStat == STAT_MINIMUMPOISONDAMAGE) {
+	else if (nStat == STAT_MINIMUMPOISONDAMAGE)
+	{
 		if (pDmgStats->nPsnDmgRange == 0)
 			return FALSE;
 		if (pDmgStats->nPsnCount <= 0)
@@ -870,23 +984,27 @@ BOOL __stdcall Item::OnDamagePropertyBuild(UnitAny* pItem, DamageStats* pDmgStat
 		pDmgStats->nMinPsnDmg = stat_min = ((pDmgStats->nMinPsnDmg * pDmgStats->nPsnLen) + 128) / 256;
 		pDmgStats->nMaxPsnDmg = stat_max = ((pDmgStats->nMaxPsnDmg * pDmgStats->nPsnLen) + 128) / 256;
 
-		if (stat_min >= stat_max) {
+		if (stat_min >= stat_max)
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODPOISONDAMAGE);
 			swprintf_s(newDesc, 128, szProp, stat_max, pDmgStats->nPsnLen / 25); // Per frame
 		}
-		else {
+		else
+		{
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODPOISONDAMAGERANGE);
 			swprintf_s(newDesc, 128, szProp, stat_min, stat_max, pDmgStats->nPsnLen / 25);
 		}
 		wcscat_s(wOut, 1024, newDesc);
 		return TRUE;
 	}
-	else if (nStat == STAT_SECONDARYMAXIMUMDAMAGE) {
+	else if (nStat == STAT_SECONDARYMAXIMUMDAMAGE)
+	{
 		if (pDmgStats->dword14)
 			return TRUE;
 		return pDmgStats->nDmgRange != 0;
 	}
-	else if (nStat == STAT_MINIMUMDAMAGE || nStat == STAT_MAXIMUMDAMAGE || nStat == STAT_SECONDARYMINIMUMDAMAGE) {
+	else if (nStat == STAT_MINIMUMDAMAGE || nStat == STAT_MAXIMUMDAMAGE || nStat == STAT_SECONDARYMINIMUMDAMAGE)
+	{
 		if (pDmgStats->dword14)
 			return TRUE;
 		if (!pDmgStats->nDmgRange)
@@ -895,31 +1013,36 @@ BOOL __stdcall Item::OnDamagePropertyBuild(UnitAny* pItem, DamageStats* pDmgStat
 		stat_min = pDmgStats->nMinDmg;
 		stat_max = pDmgStats->nMaxDmg;
 
-		if (stat_min >= stat_max) {
+		if (stat_min >= stat_max)
+		{
 			return FALSE;
 		}
-		else {
+		else
+		{
 			pDmgStats->dword14 = TRUE;
 			szProp = D2LANG_GetLocaleText(D2STR_STRMODMINDAMAGERANGE);
-
 		}
 	}
-	else if (nStat == STAT_ENHANCEDMINIMUMDAMAGE) {
+	else if (nStat == STAT_ENHANCEDMINIMUMDAMAGE)
+	{
 		if (!pDmgStats->nDmgPercentRange)
 			return FALSE;
 		stat_min = pDmgStats->nMinDmgPercent;
-		stat_max = (int) (D2LANG_GetLocaleText(10023)); // "Enhanced damage"
+		stat_max = (int)(D2LANG_GetLocaleText(10023)); // "Enhanced damage"
 		szProp = L"+%d%% %s\n";
 	}
 
-	if (szProp == nullptr) {
+	if (szProp == nullptr)
+	{
 		return FALSE;
 	}
 
-	if (ranged) {
+	if (ranged)
+	{
 		swprintf_s(newDesc, 128, szProp, stat_min, stat_max);
 	}
-	else {
+	else
+	{
 		swprintf_s(newDesc, 128, szProp, stat_max);
 	}
 
@@ -937,18 +1060,21 @@ BOOL __stdcall Item::OnDamagePropertyBuild(UnitAny* pItem, DamageStats* pDmgStat
 	return TRUE;
 }
 
-void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, int nStatParam) {
-	if (!(Toggles["Always Show Item Stat Ranges"].state || GetKeyState(VK_CONTROL) & 0x8000) || pItem == nullptr || pItem->dwType != UNIT_ITEM) {
+void __stdcall Item::OnPropertyBuild(wchar_t *wOut, int nStat, UnitAny *pItem, int nStatParam)
+{
+	if (!(Toggles["Always Show Item Stat Ranges"].state || GetKeyState(VK_CONTROL) & 0x8000) || pItem == nullptr || pItem->dwType != UNIT_ITEM)
+	{
 		return;
 	}
 
-	ItemsTxtStat* stat = nullptr;
-	ItemsTxtStat* all_stat = nullptr; // Stat for common modifer like all-res, all-stats
+	ItemsTxtStat *stat = nullptr;
+	ItemsTxtStat *all_stat = nullptr; // Stat for common modifer like all-res, all-stats
 
-	switch (pItem->pItemData->dwQuality) {
+	switch (pItem->pItemData->dwQuality)
+	{
 	case ITEM_QUALITY_SET:
 	{
-		SetItemsTxt * pTxt = &(*p_D2COMMON_sgptDataTable)->pSetItemsTxt[pItem->pItemData->dwFileIndex];
+		SetItemsTxt *pTxt = &(*p_D2COMMON_sgptDataTable)->pSetItemsTxt[pItem->pItemData->dwFileIndex];
 		if (!pTxt)
 			break;
 		stat = GetItemsTxtStatByMod(pTxt->hStats, 9 + 10, nStat, nStatParam);
@@ -957,30 +1083,36 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 	}
 	case ITEM_QUALITY_UNIQUE:
 	{
-		if (pItem->pItemData->dwQuality == ITEM_QUALITY_UNIQUE) {
-			UniqueItemsTxt * pTxt = &(*p_D2COMMON_sgptDataTable)->pUniqueItemsTxt[pItem->pItemData->dwFileIndex];
-			if (pTxt == nullptr) {
+		if (pItem->pItemData->dwQuality == ITEM_QUALITY_UNIQUE)
+		{
+			UniqueItemsTxt *pTxt = &(*p_D2COMMON_sgptDataTable)->pUniqueItemsTxt[pItem->pItemData->dwFileIndex];
+			if (pTxt == nullptr)
+			{
 				break;
 			}
 
 			stat = GetItemsTxtStatByMod(pTxt->hStats, 12, nStat, nStatParam);
 
-			if (stat != nullptr) {
+			if (stat != nullptr)
+			{
 				all_stat = GetAllStatModifier(pTxt->hStats, 12, nStat, stat);
 			}
 		}
-		
-		if (stat != nullptr) {
+
+		if (stat != nullptr)
+		{
 			int statMin = stat->dwMin;
 			int statMax = stat->dwMax;
 
-			if (all_stat != nullptr) {
+			if (all_stat != nullptr)
+			{
 				statMin += all_stat->dwMin;
 				statMax += all_stat->dwMax;
 			}
 
-			if (statMin < statMax) {
-				int	aLen = wcslen(wOut);
+			if (statMin < statMax)
+			{
+				int aLen = wcslen(wOut);
 				int leftSpace = 128 - aLen > 0 ? 128 - aLen : 0;
 
 				if (nStat == STAT_LIFEPERLEVEL || nStat == STAT_MANAPERLEVEL || nStat == STAT_MAXENHANCEDDMGPERLEVEL || nStat == STAT_MAXDAMAGEPERLEVEL)
@@ -988,37 +1120,43 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 					statMin = D2COMMON_GetBaseStatSigned(D2CLIENT_GetPlayerUnit(), STAT_LEVEL, 0) * statMin >> 3;
 					statMax = D2COMMON_GetBaseStatSigned(D2CLIENT_GetPlayerUnit(), STAT_LEVEL, 0) * statMax >> 3;
 				}
-				if (leftSpace) {
+				if (leftSpace)
+				{
 					swprintf_s(wOut + aLen, leftSpace,
-							L" %s[%d - %d]%s",
-							GetColorCode(statRangeColor).c_str(),
-							statMin,
-							statMax,
-							GetColorCode(TextColor::Blue).c_str());
+							   L" %s[%d - %d]%s",
+							   GetColorCode(statRangeColor).c_str(),
+							   statMin,
+							   statMax,
+							   GetColorCode(TextColor::Blue).c_str());
 				}
 			}
 		}
-	} break;
+	}
+	break;
 	default:
 	{
-		if (pItem->pItemData->dwFlags & ITEM_RUNEWORD) {
-			RunesTxt* pTxt = GetRunewordTxtById(pItem->pItemData->wPrefix[0]);
+		if (pItem->pItemData->dwFlags & ITEM_RUNEWORD)
+		{
+			RunesTxt *pTxt = GetRunewordTxtById(pItem->pItemData->wPrefix[0]);
 			if (!pTxt)
 				break;
 			stat = GetItemsTxtStatByMod(pTxt->hStats, 7, nStat, nStatParam);
-			if (stat) {
+			if (stat)
+			{
 				int statMin = stat->dwMin;
 				int statMax = stat->dwMax;
 
 				all_stat = GetAllStatModifier(pTxt->hStats, 7, nStat, stat);
 
-				if (all_stat) {
+				if (all_stat)
+				{
 					statMin += all_stat->dwMin;
 					statMax += all_stat->dwMax;
 				}
 
-				if (stat->dwMin != stat->dwMax) {
-					int	aLen = wcslen(wOut);
+				if (stat->dwMin != stat->dwMax)
+				{
+					int aLen = wcslen(wOut);
 					int leftSpace = 128 - aLen > 0 ? 128 - aLen : 0;
 
 					if (nStat == STAT_LIFEPERLEVEL || nStat == STAT_MANAPERLEVEL || nStat == STAT_MAXENHANCEDDMGPERLEVEL || nStat == STAT_MAXDAMAGEPERLEVEL)
@@ -1028,11 +1166,11 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 					}
 					if (leftSpace)
 						swprintf_s(wOut + aLen, leftSpace,
-								L" %s[%d - %d]%s",
-								GetColorCode(statRangeColor).c_str(),
-								statMin,
-								statMax,
-								GetColorCode(TextColor::Blue).c_str());
+								   L" %s[%d - %d]%s",
+								   GetColorCode(statRangeColor).c_str(),
+								   statMin,
+								   statMax,
+								   GetColorCode(TextColor::Blue).c_str());
 				}
 			}
 		}
@@ -1041,30 +1179,33 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 			int nAffixes = *p_D2COMMON_AutoMagicTxt - D2COMMON_GetItemMagicalMods(1); // Number of affixes without Automagic
 			int min = 0, max = 0;
 			int type = D2COMMON_GetItemType(pItem);
-			BnetData* pData = (*p_D2LAUNCH_BnData);
+			BnetData *pData = (*p_D2LAUNCH_BnData);
 			int is_expansion = pData->nCharFlags & PLAYER_TYPE_EXPANSION;
-			for (int i = 1;; ++i) {
+			for (int i = 1;; ++i)
+			{
 				if (!pItem->pItemData->wAutoPrefix && i > nAffixes) // Don't include Automagic.txt affixes if item doesn't use them
 					break;
-				AutoMagicTxt* pTxt = D2COMMON_GetItemMagicalMods(i);
+				AutoMagicTxt *pTxt = D2COMMON_GetItemMagicalMods(i);
 				if (!pTxt)
 					break;
-				bool is_classic_affix = pTxt->wVersion==1;
-				bool is_expansion_affix = pTxt->wVersion!=0;
+				bool is_classic_affix = pTxt->wVersion == 1;
+				bool is_expansion_affix = pTxt->wVersion != 0;
 				// skip affixes that are not valid for expansion when using expansion stat ranges
-				if (is_expansion && !is_expansion_affix) continue;
+				if (is_expansion && !is_expansion_affix)
+					continue;
 				// skip non-classic affixes when using classic stat ranges
-				if (!is_expansion && !is_classic_affix) continue;
-				//Skip if stat level is > 99
+				if (!is_expansion && !is_classic_affix)
+					continue;
+				// Skip if stat level is > 99
 				if (pTxt->dwLevel > 99)
 					continue;
-				//Skip if stat is not spawnable
+				// Skip if stat is not spawnable
 				if (pItem->pItemData->dwQuality < ITEM_QUALITY_CRAFT && !pTxt->wSpawnable)
 					continue;
-				//Skip for rares+
-				if (pItem->pItemData->dwQuality >= ITEM_QUALITY_RARE  && !pTxt->nRare)
+				// Skip for rares+
+				if (pItem->pItemData->dwQuality >= ITEM_QUALITY_RARE && !pTxt->nRare)
 					continue;
-				//Firstly check Itemtype
+				// Firstly check Itemtype
 				bool found_itype = false;
 				bool found_etype = false;
 
@@ -1072,7 +1213,8 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 				{
 					if (!pTxt->wEType[j] || pTxt->wEType[j] == 0xFFFF)
 						break;
-					if (D2COMMON_IsMatchingType(pItem, pTxt->wEType[j])) {
+					if (D2COMMON_IsMatchingType(pItem, pTxt->wEType[j]))
+					{
 						found_etype = true;
 						break;
 					}
@@ -1084,7 +1226,8 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 				{
 					if (!pTxt->wIType[j] || pTxt->wIType[j] == 0xFFFF)
 						break;
-					if (D2COMMON_IsMatchingType(pItem, pTxt->wIType[j])) {
+					if (D2COMMON_IsMatchingType(pItem, pTxt->wIType[j]))
+					{
 						found_itype = true;
 						break;
 					}
@@ -1097,10 +1240,11 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 					continue;
 				min = min == 0 ? stat->dwMin : ((stat->dwMin < min) ? stat->dwMin : min);
 				max = (stat->dwMax > max) ? stat->dwMax : max;
-				//DEBUGMSG(L"%s: update min to %d, and max to %d (record #%d)", wOut, min, max, i)
+				// DEBUGMSG(L"%s: update min to %d, and max to %d (record #%d)", wOut, min, max, i)
 			}
-			if (min < max) {
-				int	aLen = wcslen(wOut);
+			if (min < max)
+			{
+				int aLen = wcslen(wOut);
 				int leftSpace = 128 - aLen > 0 ? 128 - aLen : 0;
 				if (nStat == STAT_MAXENHANCEDDMGPERLEVEL || nStat == STAT_MAXDAMAGEPERLEVEL || nStat == STAT_LIFEPERLEVEL || nStat == STAT_MANAPERLEVEL)
 				{
@@ -1109,16 +1253,15 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 				}
 				if (leftSpace)
 					swprintf_s(wOut + aLen, leftSpace,
-							L" %s[%d - %d]%s",
-							GetColorCode(statRangeColor).c_str(),
-							min,
-							max,
-							GetColorCode(TextColor::Blue).c_str());
+							   L" %s[%d - %d]%s",
+							   GetColorCode(statRangeColor).c_str(),
+							   min,
+							   max,
+							   GetColorCode(TextColor::Blue).c_str());
 			}
 		}
-
-	} break;
-
+	}
+	break;
 	}
 }
 
@@ -1129,7 +1272,7 @@ void __stdcall Item::OnPropertyBuild(wchar_t* wOut, int nStat, UnitAny* pItem, i
 	@param nStats - number of pStats
 	@param pStats - pointer to ItemsTxtStat* array [PropertiesTxt Id, min, max val)
 */
-ItemsTxtStat* GetItemsTxtStatByMod(ItemsTxtStat* pStats, int nStats, int nStat, int nStatParam)
+ItemsTxtStat *GetItemsTxtStatByMod(ItemsTxtStat *pStats, int nStats, int nStat, int nStatParam)
 {
 	if (nStat == STAT_SKILLONKILL || nStat == STAT_SKILLONHIT || nStat == STAT_SKILLONSTRIKING || nStat == STAT_SKILLONDEATH ||
 		nStat == STAT_SKILLONLEVELUP || nStat == STAT_SKILLWHENSTRUCK || nStat == STAT_CHARGED ||
@@ -1137,31 +1280,37 @@ ItemsTxtStat* GetItemsTxtStatByMod(ItemsTxtStat* pStats, int nStats, int nStat, 
 	{
 		return nullptr;
 	}
-	for (int i = 0; i<nStats; ++i) {
-		if (pStats[i].dwProp == 0xffffffff) {
+	for (int i = 0; i < nStats; ++i)
+	{
+		if (pStats[i].dwProp == 0xffffffff)
+		{
 			break;
 		}
-		PropertiesTxt * pProp = &(*p_D2COMMON_sgptDataTable)->pPropertiesTxt[pStats[i].dwProp];
-		if (pProp == nullptr) {
+		PropertiesTxt *pProp = &(*p_D2COMMON_sgptDataTable)->pPropertiesTxt[pStats[i].dwProp];
+		if (pProp == nullptr)
+		{
 			break;
 		}
-		if (pProp->wStat[0] == 0xFFFF && pProp->nFunc[0] == 7 && (nStat == STAT_ENHANCEDDAMAGE || nStat == STAT_ENHANCEDMINIMUMDAMAGE || nStat == STAT_ENHANCEDMAXIMUMDAMAGE ||
-			nStat == STAT_MAXENHANCEDDMGPERTIME || nStat == STAT_MAXENHANCEDDMGPERLEVEL)) {
+		if (pProp->wStat[0] == 0xFFFF && pProp->nFunc[0] == 7 && (nStat == STAT_ENHANCEDDAMAGE || nStat == STAT_ENHANCEDMINIMUMDAMAGE || nStat == STAT_ENHANCEDMAXIMUMDAMAGE || nStat == STAT_MAXENHANCEDDMGPERTIME || nStat == STAT_MAXENHANCEDDMGPERLEVEL))
+		{
 			return &pStats[i];
 		}
-		else if (pProp->wStat[0] == 0xFFFF && pProp->nFunc[0] == 6 && (nStat == STAT_MAXIMUMDAMAGE || nStat == STAT_SECONDARYMAXIMUMDAMAGE ||
-			nStat == STAT_MAXDAMAGEPERTIME || nStat == STAT_MAXDAMAGEPERLEVEL)) {
+		else if (pProp->wStat[0] == 0xFFFF && pProp->nFunc[0] == 6 && (nStat == STAT_MAXIMUMDAMAGE || nStat == STAT_SECONDARYMAXIMUMDAMAGE || nStat == STAT_MAXDAMAGEPERTIME || nStat == STAT_MAXDAMAGEPERLEVEL))
+		{
 			return &pStats[i];
 		}
-		else if (pProp->wStat[0] == 0xFFFF && pProp->nFunc[0] == 5 && (nStat == STAT_MINIMUMDAMAGE || nStat == STAT_SECONDARYMINIMUMDAMAGE)) {
+		else if (pProp->wStat[0] == 0xFFFF && pProp->nFunc[0] == 5 && (nStat == STAT_MINIMUMDAMAGE || nStat == STAT_SECONDARYMINIMUMDAMAGE))
+		{
 			return &pStats[i];
 		}
 		for (int j = 0; j < 7; ++j)
 		{
-			if (pProp->wStat[j] == 0xFFFF) {
+			if (pProp->wStat[j] == 0xFFFF)
+			{
 				break;
 			}
-			if (pProp->wStat[j] == nStat && pStats[i].dwPar == nStatParam) {
+			if (pProp->wStat[j] == nStat && pStats[i].dwPar == nStatParam)
+			{
 				return &pStats[i];
 			}
 		}
@@ -1176,24 +1325,29 @@ ItemsTxtStat* GetItemsTxtStatByMod(ItemsTxtStat* pStats, int nStats, int nStat, 
 	@param nStats - number of pStats
 	@param pStats - pointer to ItemsTxtStat* array [PropertiesTxt Id, min, max val)
 */
-ItemsTxtStat* GetAllStatModifier(ItemsTxtStat* pStats, int nStats, int nStat, ItemsTxtStat* pOrigin)
+ItemsTxtStat *GetAllStatModifier(ItemsTxtStat *pStats, int nStats, int nStat, ItemsTxtStat *pOrigin)
 {
-	for (int i = 0; i<nStats; ++i) {
+	for (int i = 0; i < nStats; ++i)
+	{
 		if (pStats[i].dwProp == 0xffffffff)
 			break;
 		if (pStats[i].dwProp == pOrigin->dwProp)
 			continue;
 
-		PropertiesTxt * pProp = &(*p_D2COMMON_sgptDataTable)->pPropertiesTxt[pStats[i].dwProp];
-		if (pProp == nullptr) {
+		PropertiesTxt *pProp = &(*p_D2COMMON_sgptDataTable)->pPropertiesTxt[pStats[i].dwProp];
+		if (pProp == nullptr)
+		{
 			break;
 		}
 
-		for (int j = 0; j < 7; ++j) {
-			if (pProp->wStat[j] == 0xFFFF) {
+		for (int j = 0; j < 7; ++j)
+		{
+			if (pProp->wStat[j] == 0xFFFF)
+			{
 				break;
 			}
-			if (pProp->wStat[j] == nStat) {
+			if (pProp->wStat[j] == nStat)
+			{
 				return &pStats[i];
 			}
 		}
@@ -1201,12 +1355,12 @@ ItemsTxtStat* GetAllStatModifier(ItemsTxtStat* pStats, int nStats, int nStat, It
 	return nullptr;
 }
 
-RunesTxt* GetRunewordTxtById(int rwId)
+RunesTxt *GetRunewordTxtById(int rwId)
 {
 	int n = *(D2COMMON_GetRunesTxtRecords());
 	for (int i = 1; i < n; ++i)
 	{
-		RunesTxt* pTxt = D2COMMON_GetRunesTxt(i);
+		RunesTxt *pTxt = D2COMMON_GetRunesTxt(i);
 		if (!pTxt)
 			break;
 		if (pTxt->dwRwId == rwId)
@@ -1215,9 +1369,9 @@ RunesTxt* GetRunewordTxtById(int rwId)
 	return 0;
 }
 
-UnitAny* Item::GetViewUnit ()
+UnitAny *Item::GetViewUnit()
 {
-	UnitAny* view = (viewingUnit) ? viewingUnit : D2CLIENT_GetPlayerUnit();
+	UnitAny *view = (viewingUnit) ? viewingUnit : D2CLIENT_GetPlayerUnit();
 	if (view->dwUnitId == D2CLIENT_GetPlayerUnit()->dwUnitId)
 		return D2CLIENT_GetPlayerUnit();
 
@@ -1236,16 +1390,15 @@ void __declspec(naked) ItemName_Interception()
 	}
 }
 
-
 __declspec(naked) void __fastcall GetProperties_Interception()
 {
 	__asm
-	{
+		{
 		push eax
 		call Item::OnProperties
 		add esp, 0x808
 		ret 12
-	}
+		}
 }
 
 /*	Wrapper over D2CLIENT.0x2E04B (1.13d)
@@ -1256,10 +1409,10 @@ __declspec(naked) void __fastcall GetProperties_Interception()
 void __declspec(naked) GetItemPropertyStringDamage_Interception()
 {
 	__asm {
-		push[esp + 8]			// wOut
-		push[esp + 8]			// nStat
-		push eax				// pStats
-		push[esp - 0x20 + 12]	// pItem
+		push[esp + 8] // wOut
+		push[esp + 8] // nStat
+		push eax // pStats
+		push[esp - 0x20 + 12] // pItem
 
 		call Item::OnDamagePropertyBuild
 
@@ -1280,7 +1433,7 @@ void __declspec(naked) GetItemPropertyString_Interception()
 	__asm
 	{
 		pop rtn
-		// Firstly generate string using old function
+			// Firstly generate string using old function
 		call D2CLIENT_ParseStats_J
 		push rtn
 
@@ -1291,7 +1444,7 @@ void __declspec(naked) GetItemPropertyString_Interception()
 		push ecx
 		push edx
 
-		// Then pass the output to our func
+				// Then pass the output to our func
 		push [esp + 12] // nStatParam
 		push eax // pItem
 		push ebx // nStat
@@ -1353,25 +1506,26 @@ void __declspec(naked) ViewInventoryPatch3_ASM()
 	}
 }
 
-//seems to force alt to be down
+// seems to force alt to be down
 BOOL Item::PermShowItemsPatch1()
 {
 	return Toggles["Always Show Items"].state || D2CLIENT_GetUIState(UI_GROUND_ITEMS);
 }
 
-//these two seem to deal w/ fixing the inv/waypoints when alt is down
-//one of them breaks being able to not hover monsters when holding alt
-//e.g. if ur wwing as a barb and dont want to lock a monster u usually hold
-//alt (or space or whatever u have show items bound to). this is broken with
-//these patches.
-BOOL Item::PermShowItemsPatch2() {
+// these two seem to deal w/ fixing the inv/waypoints when alt is down
+// one of them breaks being able to not hover monsters when holding alt
+// e.g. if ur wwing as a barb and dont want to lock a monster u usually hold
+// alt (or space or whatever u have show items bound to). this is broken with
+// these patches.
+BOOL Item::PermShowItemsPatch2()
+{
 	return Toggles["Always Show Items"].state || D2CLIENT_GetUIState(UI_GROUND_ITEMS);
 }
 
-BOOL Item::PermShowItemsPatch3() {
+BOOL Item::PermShowItemsPatch3()
+{
 	return Toggles["Always Show Items"].state || D2CLIENT_GetUIState(UI_GROUND_ITEMS);
 }
-
 
 void __declspec(naked) PermShowItemsPatch1_ASM()
 {
@@ -1381,7 +1535,6 @@ void __declspec(naked) PermShowItemsPatch1_ASM()
 		ret
 	}
 }
-
 
 void __declspec(naked) PermShowItemsPatch2_ASM()
 {
@@ -1397,7 +1550,6 @@ void __declspec(naked) PermShowItemsPatch2_ASM()
 	}
 }
 
-
 void __declspec(naked) PermShowItemsPatch3_ASM()
 {
 	__asm {
@@ -1412,11 +1564,10 @@ void __declspec(naked) PermShowItemsPatch3_ASM()
 		jge outcode
 		ret
 		outcode :
-		add dword ptr[esp], 0x38A  //to 6FB0DD89
+		add dword ptr[esp], 0x38A // to 6FB0DD89
 			ret
 	}
 }
-
 
 void __declspec(naked) PermShowItemsPatch4_ASM()
 {
@@ -1427,4 +1578,204 @@ void __declspec(naked) PermShowItemsPatch4_ASM()
 		pop eax
 		ret
 	}
+}
+
+void Item::OnDraw()
+{
+	if (!Toggles["Show Item Quantities"].state)
+	{
+		return;
+	}
+
+	DrawItemQuantities();
+}
+
+void Item::DrawItemQuantities()
+{
+	UnitAny *player = D2CLIENT_GetPlayerUnit();
+	if (!player)
+		return;
+
+	bool inventoryOpen = D2CLIENT_GetUIState(UI_INVENTORY);
+	bool stashOpen = D2CLIENT_GetUIState(UI_STASH);
+	bool cubeOpen = D2CLIENT_GetUIState(UI_CUBE);
+
+	if (!inventoryOpen && !stashOpen && !cubeOpen)
+	{
+		return;
+	}
+
+	for (UnitAny *pItem = player->pInventory->pFirstItem; pItem; pItem = pItem->pItemData->pNextInvItem)
+	{
+		if (!ShouldDisplayQuantity(pItem))
+		{
+			continue;
+		}
+
+		int location = pItem->pItemData->ItemLocation;
+		if ((location == STORAGE_INVENTORY && !inventoryOpen) ||
+			(location == STORAGE_STASH && !stashOpen) ||
+			(location == STORAGE_CUBE && !cubeOpen))
+		{
+			continue;
+		}
+
+		int quantity = D2COMMON_GetUnitStat(pItem, STAT_AMMOQUANTITY, 0);
+		//if (quantity <= 1)
+		//{
+		//	continue; // Don't show quantity for single items
+		//}
+
+		int screenX = GetItemScreenX(pItem);
+		int screenY = GetItemScreenY(pItem);
+
+		if (screenX > 0 && screenY > 0)
+		{
+			DrawQuantityOnItem(pItem, screenX, screenY, quantity);
+		}
+	}
+}
+
+bool Item::ShouldDisplayQuantity(UnitAny *item)
+{
+	if (!item)
+		return false;
+
+	char *code = D2COMMON_GetItemText(item->dwTxtFileNo)->szCode;
+
+
+	// Stackable runes (01s-33s format)
+	if (code[2] == 's' && code[0] >= '0' && code[0] <= '9' && code[1] >= '0' && code[1] <= '9')
+	{
+		int runeNum = ((code[0] - '0') * 10) + (code[1] - '0');
+		if (runeNum >= 1 && runeNum <= 33)
+		{
+			return true;
+		}
+	}
+
+	// Stackable gems
+	if ((code[0] == 'g' && (code[1] == 'l' || code[1] == 'p' || code[1] == 's' || code[1] == 'z')) ||
+		(code[0] == 's' && code[1] == 'k'))
+	{
+		return true;
+	}
+
+
+	if ((code[0] == 'a' && code[1] == 'q') ||
+		(code[0] == 'c' && code[1] == 'q'))
+	{ 
+		return true;
+	}
+
+	if (code[0] == 't' && (code[1] == 'h' || code[1] == 'k'))
+	{
+		return true;
+	}
+
+	if ((code[0] == 'i' && code[1] == 's') || 
+		(code[0] == 't' && code[1] == 'b') || 
+		(code[0] == 'i' && code[1] == 'b'))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+int Item::GetItemScreenX(UnitAny *item)
+{
+	if (!item)
+		return 0;
+
+	int location = item->pItemData->ItemLocation;
+	int itemX = item->pObjectPath->dwPosX;
+
+	if (location == STORAGE_INVENTORY)
+	{
+		InventoryLayout *layout = p_D2CLIENT_InventoryLayout;
+		return layout->Left + (itemX * layout->SlotPixelWidth);
+	}
+	else if (location == STORAGE_STASH)
+	{
+		InventoryLayout *layout = p_D2CLIENT_StashLayout;
+		return layout->Left + (itemX * layout->SlotPixelWidth);
+	}
+	else if (location == STORAGE_CUBE)
+	{
+		InventoryLayout *layout = p_D2CLIENT_CubeLayout;
+		return layout->Left + (itemX * layout->SlotPixelWidth);
+	}
+
+	return 0;
+}
+
+int Item::GetItemScreenY(UnitAny *item)
+{
+	if (!item)
+		return 0;
+
+	int location = item->pItemData->ItemLocation;
+	int itemY = item->pObjectPath->dwPosY;
+
+	if (location == STORAGE_INVENTORY)
+	{
+		InventoryLayout *layout = p_D2CLIENT_InventoryLayout;
+		return layout->Top + (itemY * layout->SlotPixelHeight);
+	}
+	else if (location == STORAGE_STASH)
+	{
+		InventoryLayout *layout = p_D2CLIENT_StashLayout;
+		return layout->Top + (itemY * layout->SlotPixelHeight);
+	}
+	else if (location == STORAGE_CUBE)
+	{
+		InventoryLayout *layout = p_D2CLIENT_CubeLayout;
+		return layout->Top + (itemY * layout->SlotPixelHeight);
+	}
+
+	return 0;
+}
+
+void Item::DrawQuantityOnItem(UnitAny *item, int x, int y, int quantity)
+{
+	if (!item || quantity < 1)
+		return;
+
+	ItemText *itemTxt = D2COMMON_GetItemText(item->dwTxtFileNo);
+	if (!itemTxt)
+		return;
+
+	int itemWidth = itemTxt->xSize;
+	int itemHeight = itemTxt->ySize;
+
+	int textX = x + 2; // Small offset from left edge
+
+	int location = item->pItemData->ItemLocation;
+	int cellHeight = 0;
+
+	if (location == STORAGE_INVENTORY)
+	{
+		cellHeight = p_D2CLIENT_InventoryLayout->SlotPixelHeight;
+	}
+	else if (location == STORAGE_STASH)
+	{
+		cellHeight = p_D2CLIENT_StashLayout->SlotPixelHeight;
+	}
+	else if (location == STORAGE_CUBE)
+	{
+		cellHeight = p_D2CLIENT_CubeLayout->SlotPixelHeight;
+	}
+
+	int textY = y + (itemHeight * cellHeight) - 8; // Near bottom with small offset
+
+	char quantityText[16];
+	sprintf_s(quantityText, "%d", quantity);
+
+	Drawing::Texthook::Draw(textX - 1, textY - 1, Drawing::None, 6, Black, quantityText);
+	Drawing::Texthook::Draw(textX + 1, textY - 1, Drawing::None, 6, Black, quantityText);
+	Drawing::Texthook::Draw(textX - 1, textY + 1, Drawing::None, 6, Black, quantityText);
+	Drawing::Texthook::Draw(textX + 1, textY + 1, Drawing::None, 6, Black, quantityText);
+
+	Drawing::Texthook::Draw(textX, textY, Drawing::None, 6, White, quantityText);
 }
