@@ -1596,6 +1596,9 @@ void Item::DrawItemQuantities()
 	if (!player)
 		return;
 
+	if (*p_D2CLIENT_SelectedInvItem)
+		return;
+
 	bool inventoryOpen = D2CLIENT_GetUIState(UI_INVENTORY);
 	bool stashOpen = D2CLIENT_GetUIState(UI_STASH);
 	bool cubeOpen = D2CLIENT_GetUIState(UI_CUBE);
@@ -1621,10 +1624,10 @@ void Item::DrawItemQuantities()
 		}
 
 		int quantity = D2COMMON_GetUnitStat(pItem, STAT_AMMOQUANTITY, 0);
-		//if (quantity <= 1)
+		// if (quantity <= 1)
 		//{
 		//	continue; // Don't show quantity for single items
-		//}
+		// }
 
 		int screenX = GetItemScreenX(pItem);
 		int screenY = GetItemScreenY(pItem);
@@ -1643,7 +1646,6 @@ bool Item::ShouldDisplayQuantity(UnitAny *item)
 
 	char *code = D2COMMON_GetItemText(item->dwTxtFileNo)->szCode;
 
-
 	// Stackable runes (01s-33s format)
 	if (code[2] == 's' && code[0] >= '0' && code[0] <= '9' && code[1] >= '0' && code[1] <= '9')
 	{
@@ -1661,10 +1663,9 @@ bool Item::ShouldDisplayQuantity(UnitAny *item)
 		return true;
 	}
 
-
 	if ((code[0] == 'a' && code[1] == 'q') ||
 		(code[0] == 'c' && code[1] == 'q'))
-	{ 
+	{
 		return true;
 	}
 
@@ -1673,8 +1674,8 @@ bool Item::ShouldDisplayQuantity(UnitAny *item)
 		return true;
 	}
 
-	if ((code[0] == 'i' && code[1] == 's') || 
-		(code[0] == 't' && code[1] == 'b') || 
+	if ((code[0] == 'i' && code[1] == 's') ||
+		(code[0] == 't' && code[1] == 'b') ||
 		(code[0] == 'i' && code[1] == 'b'))
 	{
 		return true;
