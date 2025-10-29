@@ -22,3 +22,7 @@ Feel free to use it, fork it or whatever, just make sure you give credits to the
 - (1.13d) Commented out ChannelInput intercept. (crashes game)
 - Added Merc's skills and levels in the StatDisplay menu (8).
 - Added autostasher for jewels, runes and gems.
+- Added display for new stackable runes
+- Updated quickmove and autostash to stack items when moving
+- Added display item quantities in the bottom left, similar to GL
+  
